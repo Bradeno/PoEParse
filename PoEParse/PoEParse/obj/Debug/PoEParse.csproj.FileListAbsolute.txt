@@ -1,0 +1,8 @@
+c:\users\braden\documents\visual studio 2017\Projects\PoEParse\PoEParse\bin\Debug\PoEParse.exe.config
+c:\users\braden\documents\visual studio 2017\Projects\PoEParse\PoEParse\bin\Debug\PoEParse.exe
+c:\users\braden\documents\visual studio 2017\Projects\PoEParse\PoEParse\bin\Debug\PoEParse.pdb
+c:\users\braden\documents\visual studio 2017\Projects\PoEParse\PoEParse\obj\Debug\PoEParse.exe
+c:\users\braden\documents\visual studio 2017\Projects\PoEParse\PoEParse\obj\Debug\PoEParse.pdb
+c:\users\braden\documents\visual studio 2017\Projects\PoEParse\PoEParse\bin\Debug\Newtonsoft.Json.dll
+c:\users\braden\documents\visual studio 2017\Projects\PoEParse\PoEParse\bin\Debug\Newtonsoft.Json.xml
+C:\Users\Braden\documents\visual studio 2017\Projects\PoEParse\PoEParse\obj\Debug\PoEParse.csprojResolveAssemblyReference.cache
