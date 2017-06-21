@@ -114,5 +114,70 @@ CREATE TYPE dbo.StashesParseType AS TABLE
 	stashType VARCHAR(128), items NVARCHAR(128), _public BIT)
 GO
 
+--Holds Item Information (From Items Struct)
+create type dbo.ItemsParseType as table
+	(verified tinyint, w tinyint, h tinyint, ilvl smallint, icon varchar(1024), support tinyint, league varchar(128), id varchar(128), name varchar(128),
+	typeLine varchar(128), identified tinyint, corrupted tinyint, lockedToCharacter tinyint, secDescrText varchar(128), explicitMods nvarchar(128), descrText varchar(128),
+	frameType tinyint, x smallint, y smallint, inventoryId varchar(128), cosmeticMods nvarchar(128), note nvarchar(128), flavourText varchar(1024), implicitMods nvarchar(128),
+	craftedMods nvarchar(128), duplicated tinyint, talismanTier int, isRelic tinyint, utilityMods nvarchar(128), enchantMods nvarchar(128), stackSize int, maxStackSize int, artFileName nvarchar(128),
+	prophecyText varchar(128), prophecyDiffText varchar(128), sockets nvarchar(128), socketedItems nvarchar(128), nextLevelRequirements nvarchar(128), properties nvarchar(128), 
+	additionalProperties nvarchar(128), requirements nvarchar(128))
+go
 
 
+--Create Stored Procedures to handle Data Tables.
+
+CREATE PROCEDURE usp_AddChangeId
+@newId dbo.ChangeIdTableType READONLY
+AS
+BEGIN
+	DECLARE @nextId VARCHAR(128)
+	SET @nextId = (SELECT nextChangeId FROM @newId)
+	INSERT INTO ChangeId (nextChangeId, processed)
+	VALUES(@nextId, 1)
+END
+GO
+
+CREATE PROCEDURE usp_StashParse
+@newStashData StashesParseType READONLY
+AS
+BEGIN
+--Update Account Table	
+	MERGE Accounts WITH (HOLDLOCK) AS A
+	USING (SELECT DISTINCT nsd.accountName, nsd.lastCharacterName, GETDATE() FROM @newStashData nsd)
+	AS poed (accountName, lastCharacterName, lastSeen)
+		ON poed.accountName = A.accountName
+	WHEN MATCHED THEN
+		UPDATE SET A.lastCharacterName = poed.lastCharacterName, A.lastSeen = poed.lastSeen
+	WHEN NOT MATCHED THEN
+		INSERT (accountName, lastCharacterName, lastSeen)
+		VALUES (poed.accountName, poed.lastCharacterName, poed.lastSeen);
+
+--Update Stashes Table
+	MERGE Stashes WITH (HOLDLOCK) AS S
+	USING (SELECT DISTINCT nsd.id, nsd.stash, nsd.stashType, nsd._public FROM @newStashData nsd)
+	AS poed (stashId, stashName, stashType, publicStash)
+		ON poed.stashId = S.stashId
+	WHEN MATCHED THEN
+		UPDATE SET S.stashName = poed.stashName, 
+					S.stashType = poed.stashType,
+					S.publicStash = poed.publicStash
+	WHEN NOT MATCHED THEN
+		INSERT (stashId, stashName, stashType, publicStash)
+		VALUES (poed.stashId, poed.stashName, poed.stashType, poed.publicStash);
+END
+GO
+
+
+
+CREATE PROCEDURE usp_BaseItemsParse
+@newItemsData ItemsParseType readonly
+AS
+BEGIN
+--Update Items Table	
+	MERGE Items WITH (HOLDLOCK) AS I
+	USING (SELECT DISTINCT nid.id, nid.lastCharacterName, GETDATE() FROM @newItemsData nid)
+
+
+END
+GO
