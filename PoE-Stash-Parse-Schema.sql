@@ -6,7 +6,7 @@ go
 --Create Database & Table Structure
 CREATE DATABASE POE;
 go
-USE POE
+USE braden_test
 go
 
 CREATE TABLE Accounts 
@@ -121,7 +121,7 @@ create type dbo.ItemsParseType as table
 	frameType tinyint, x smallint, y smallint, inventoryId varchar(128), cosmeticMods nvarchar(128), note nvarchar(128), flavourText varchar(1024), implicitMods nvarchar(128),
 	craftedMods nvarchar(128), duplicated tinyint, talismanTier int, isRelic tinyint, utilityMods nvarchar(128), enchantMods nvarchar(128), stackSize int, maxStackSize int, artFileName nvarchar(128),
 	prophecyText varchar(128), prophecyDiffText varchar(128), sockets nvarchar(128), socketedItems nvarchar(128), nextLevelRequirements nvarchar(128), properties nvarchar(128), 
-	additionalProperties nvarchar(128), requirements nvarchar(128))
+	additionalProperties nvarchar(128), requirements nvarchar(128), accountName nvarchar(128), stashId varchar(128))
 go
 
 
@@ -176,8 +176,41 @@ AS
 BEGIN
 --Update Items Table	
 	MERGE Items WITH (HOLDLOCK) AS I
-	USING (SELECT DISTINCT nid.id, nid.lastCharacterName, GETDATE() FROM @newItemsData nid)
-
-
+	USING (SELECT * FROM @newItemsData nid) AS poed
+		ON poed.id = I.itemId
+	WHEN MATCHED THEN
+		UPDATE 
+			SET I.w = poed.w,
+				I.h = poed.h,
+				I.ilvl = poed.ilvl,
+				I.icon = poed.icon,
+				I.league = poed.league,
+				I.name = poed.name,
+				I.typeLine = poed.typeLine,
+				I.identified = poed.identified,
+				I.verified = poed.verified,
+				I.corrupted = poed.corrupted,
+				I.lockedToCharacter = poed.lockedToCharacter,
+				I.frameType = poed.frameType,
+				I.x = poed.x,
+				I.y = poed.y,
+				I.inventoryId = poed.inventoryId,
+				I.accountName = poed.accountName,
+				I.stashId = poed.stashId,
+				I.socketAmount = poed.socketAmount,
+				I.linkAmount = poed.linkAmount,
+				I.available = poed.available,
+				I.addedTs = poed.addedTs,
+				I.updatedTs = poed.updatedTs,
+				I.flavourText = poed.flavourText,
+				I.price = poed.price,
+				I.crafted = poed.crafted,
+				I.enchanted = poed.enchanted
+		WHEN NOT MATCHED THEN
+			INSERT (w, h, ilvl, icon, league, itemId, name, typeLine, identified, verified, corrupted, lockedToCharacter, frameType, x, y, inventoryId, accountName, stashId, 
+						socketAmount, linkAmount, available, addedTs, updatedTs, flavourText, price, crafted, enchanted)
+			VALUES (poed.w, poed.h, poed.ilvl, poed.icon, poed.league, poed.id, poed.name, poed.typeLine, poed.identified, poed.verified, poed.corrupted, poed.lockedToCharacter, 
+					poed.frameType, poed.x, poed.y, poed.inventoryId, poed.accountName, poed.stashId, poed.socketAmount, poed.linkAmount, poed.available, poed.addedTs, poed.updatedTs, 
+					poed.flavourText, poed.price, poed.crafted, poed.enchanted);
 END
 GO
