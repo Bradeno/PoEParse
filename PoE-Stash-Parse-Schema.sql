@@ -6,7 +6,7 @@ go
 --Create Database & Table Structure
 CREATE DATABASE POE;
 go
-USE braden_test
+USE POE
 go
 
 CREATE TABLE Accounts 
@@ -116,12 +116,12 @@ GO
 
 --Holds Item Information (From Items Struct)
 create type dbo.ItemsParseType as table
-	(verified tinyint, w tinyint, h tinyint, ilvl smallint, icon varchar(1024), support tinyint, league varchar(128), id varchar(128), name varchar(128),
-	typeLine varchar(128), identified tinyint, corrupted tinyint, lockedToCharacter tinyint, secDescrText varchar(128), explicitMods nvarchar(128), descrText varchar(128),
-	frameType tinyint, x smallint, y smallint, inventoryId varchar(128), cosmeticMods nvarchar(128), note nvarchar(128), flavourText varchar(1024), implicitMods nvarchar(128),
-	craftedMods nvarchar(128), duplicated tinyint, talismanTier int, isRelic tinyint, utilityMods nvarchar(128), enchantMods nvarchar(128), stackSize int, maxStackSize int, artFileName nvarchar(128),
+	(verified bit, w bit, h bit, ilvl smallint, icon varchar(1024), support bit, league varchar(128), id varchar(128), name varchar(128),
+	typeLine varchar(128), identified bit, corrupted bit, lockedToCharacter bit, secDescrText varchar(128), explicitMods nvarchar(128), descrText varchar(128),
+	frameType bit, x smallint, y smallint, inventoryId varchar(128), cosmeticMods nvarchar(128), note nvarchar(128), flavourText varchar(1024), implicitMods nvarchar(128),
+	craftedMods nvarchar(128), duplicated bit, talismanTier int, isRelic bit, utilityMods nvarchar(128), enchantMods nvarchar(128), stackSize int, maxStackSize int, artFileName nvarchar(128),
 	prophecyText varchar(128), prophecyDiffText varchar(128), sockets nvarchar(128), socketedItems nvarchar(128), nextLevelRequirements nvarchar(128), properties nvarchar(128), 
-	additionalProperties nvarchar(128), requirements nvarchar(128), accountName nvarchar(128), stashId varchar(128))
+	additionalProperties nvarchar(128), requirements nvarchar(128))--, accountName nvarchar(128), stashId varchar(128))
 go
 
 
@@ -171,11 +171,20 @@ GO
 
 
 CREATE PROCEDURE usp_BaseItemsParse
-@newItemsData ItemsParseType readonly
+@newItemsData ItemsParseType readonly,
+@accountName nvarchar(128),
+@stashId varchar(128)
 AS
 BEGIN
+	MERGE Leagues WITH (HOLDLOCK) AS L
+	USING (SELECT DISTINCT league FROM @newItemsData nid) AS poed
+		ON poed.league = L.leagueName
+	WHEN NOT MATCHED THEN
+		INSERT (leagueName, active, poeTradeId)
+		VALUES (poed.league, 1, poed.league);
+
 --Update Items Table	
-	MERGE Items WITH (HOLDLOCK) AS I
+	MERGE Items2 WITH (HOLDLOCK) AS I
 	USING (SELECT * FROM @newItemsData nid) AS poed
 		ON poed.id = I.itemId
 	WHEN MATCHED THEN
@@ -195,22 +204,22 @@ BEGIN
 				I.x = poed.x,
 				I.y = poed.y,
 				I.inventoryId = poed.inventoryId,
-				I.accountName = poed.accountName,
-				I.stashId = poed.stashId,
-				I.socketAmount = poed.socketAmount,
-				I.linkAmount = poed.linkAmount,
-				I.available = poed.available,
-				I.addedTs = poed.addedTs,
-				I.updatedTs = poed.updatedTs,
-				I.flavourText = poed.flavourText,
-				I.price = poed.price,
-				I.crafted = poed.crafted,
-				I.enchanted = poed.enchanted
+				I.accountName = @accountName,
+				I.stashId = @stashId,
+				--I.socketAmount = poed.socketAmount,
+				--I.linkAmount = poed.linkAmount,
+				--I.available = poed.available,
+				--I.addedTs = poed.addedTs,
+				--I.updatedTs = poed.updatedTs,
+				I.flavourText = poed.flavourText
+				--I.price = poed.price,
+				--I.crafted = poed.crafted,
+				--I.enchanted = poed.enchanted
 		WHEN NOT MATCHED THEN
 			INSERT (w, h, ilvl, icon, league, itemId, name, typeLine, identified, verified, corrupted, lockedToCharacter, frameType, x, y, inventoryId, accountName, stashId, 
 						socketAmount, linkAmount, available, addedTs, updatedTs, flavourText, price, crafted, enchanted)
 			VALUES (poed.w, poed.h, poed.ilvl, poed.icon, poed.league, poed.id, poed.name, poed.typeLine, poed.identified, poed.verified, poed.corrupted, poed.lockedToCharacter, 
-					poed.frameType, poed.x, poed.y, poed.inventoryId, poed.accountName, poed.stashId, poed.socketAmount, poed.linkAmount, poed.available, poed.addedTs, poed.updatedTs, 
-					poed.flavourText, poed.price, poed.crafted, poed.enchanted);
+					poed.frameType, poed.x, poed.y, poed.inventoryId, @accountName, @stashId, 0, 0, 0, 0, 0, 
+					poed.flavourText, 0, 0, 0);
 END
 GO
