@@ -55,6 +55,8 @@ namespace PoEParse
             foreach (Stash s in root.stashes)
             {
                 StashDataList.Add(s);
+                //For each Stash, transfer it's set of items.
+                //SaveItemData(s);
             }
             
             ListtoDataTableConverter converter = new ListtoDataTableConverter();
@@ -70,6 +72,31 @@ namespace PoEParse
                 comm.Parameters.Clear();
             }     
         
+        }
+
+        public void SaveItemData(Stash rootStash)
+        {
+            List<Item> ItemDataList = new List<Item>();
+            foreach (Item i in rootStash.items)
+            {
+                ItemDataList.Add(i);
+            }
+
+            ListtoDataTableConverter converter = new ListtoDataTableConverter();
+            DataTable dt = converter.ToDataTable(ItemDataList);
+
+            using (SqlConnection conn = new SqlConnection(SQLConnectionString))
+            using (SqlCommand comm = new SqlCommand("usp_BaseItemsParse", conn))
+            {
+                conn.Open();
+                comm.CommandType = CommandType.StoredProcedure;
+                comm.Parameters.AddWithValue("@newItemsData", dt).SqlDbType = SqlDbType.Structured;
+                comm.Parameters.Add(new SqlParameter("@stashId", rootStash.id));
+                comm.Parameters.Add(new SqlParameter("@accountName", rootStash.accountName));
+                comm.ExecuteNonQuery();
+                comm.Parameters.Clear();
+            }
+
         }
 
 
