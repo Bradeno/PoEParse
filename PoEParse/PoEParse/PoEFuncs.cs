@@ -26,6 +26,7 @@ namespace PoEParse
                 //SaveChangeId(root);
                 //SaveStashData(root);
 
+           
 
                 //shove all the data in datatables for processing.
                 ListEverythingTest(root);
@@ -108,6 +109,7 @@ namespace PoEParse
         {
             ListtoDataTableConverter dataTableConverter = new ListtoDataTableConverter();
 
+            //Object Lists
             List<StashData> ChangeIdList = new List<StashData>();
             List<Stash> StashList = new List<Stash>();
             List<Item> ItemList = new List<Item>();
@@ -122,6 +124,26 @@ namespace PoEParse
             List<Nextlevelrequirement> NextLevelRequirementList = new List<Nextlevelrequirement>();
             List<Nextlevelrequirement1> NextLevelRequirementList2 = new List<Nextlevelrequirement1>();
 
+            //Custom Tables
+            DataTable ExplicitMods_DT = new DataTable("ExplicitMods");
+            ExplicitMods_DT.Columns.AddRange(new DataColumn[]
+            {
+                new DataColumn("itemId"),
+                new DataColumn("modName"),
+                new DataColumn("modValue1"),
+                new DataColumn("modValue2"),
+                new DataColumn("modValue3"),
+                new DataColumn("modValue4"),
+                new DataColumn("modValue5"),
+                new DataColumn("modValue6"),
+                new DataColumn("modValue7"),
+                new DataColumn("modValue8"),
+                new DataColumn("modValue9"),
+                new DataColumn("modValue10"),
+                new DataColumn("modValue11"),
+                new DataColumn("modValue12"),
+            });
+
             //next change ID
             ChangeIdList.Add(root);
 
@@ -133,6 +155,26 @@ namespace PoEParse
                 foreach (Item item in stash.items)
                 {
                     ItemList.Add(item);
+
+                    if (item.explicitMods != null)
+                    {
+                        String[] modValue;
+                        modValue = new String[12];
+                        modValue.DefaultIfEmpty("");
+
+                        List<String> ModsList = new List<string>();
+                        ModsList = item.explicitMods.ToList();
+
+                        int numMods = ModsList.Count();
+
+                        for (int i = 0; i < numMods; i++)
+                        {
+                            modValue[i] = ModsList[i].ToString();
+                        }
+
+                        //Mods Datatable to send to SQL
+                        ExplicitMods_DT.Rows.Add(item.id, "Explicit", modValue[0], modValue[1], modValue[2], modValue[3]);
+                    }
 
                     foreach (Socket socket in item.sockets)
                     {
@@ -219,6 +261,26 @@ namespace PoEParse
             DataTable NextLevelRequirement1_DT = dataTableConverter.ToDataTable(NextLevelRequirementList);
             DataTable NextLevelRequirement2_DT = dataTableConverter.ToDataTable(NextLevelRequirementList2);
 
+            //Clean up the DataTables
+            Stashes_DT.Columns.Remove("items");
+
+            if (Items_DT.Columns.Contains("sockets")){ Items_DT.Columns.Remove("sockets"); }            
+            if (Items_DT.Columns.Contains("socketedItems")) { Items_DT.Columns.Remove("socketedItems"); }            
+            if (Items_DT.Columns.Contains("nextLevelRequirements")) { Items_DT.Columns.Remove("nextLevelRequirements"); }            
+            if (Items_DT.Columns.Contains("properties")) { Items_DT.Columns.Remove("properties"); }            
+            if (Items_DT.Columns.Contains("additionalProperties")) { Items_DT.Columns.Remove("additionalProperties"); }            
+            if (Items_DT.Columns.Contains("requirements")) { Items_DT.Columns.Remove("requirements"); }
+
+            if (Items_DT.Columns.Contains("requirements")) { }
+            SocketedItems_DT.Columns.Remove("requirements");
+            if (Items_DT.Columns.Contains("nextLevelRequirements")) { }
+            SocketedItems_DT.Columns.Remove("nextLevelRequirements");
+            if (Items_DT.Columns.Contains("properties")) { }
+            SocketedItems_DT.Columns.Remove("properties");
+            if (Items_DT.Columns.Contains("additionalProperties")) { }
+            SocketedItems_DT.Columns.Remove("additionalProperties");
+
+            //, "sockets", "socketedItems", "properties", "additionalProperties", "requirements");
 
         }
 
