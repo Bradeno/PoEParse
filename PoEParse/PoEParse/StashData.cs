@@ -23,7 +23,7 @@ namespace PoEParse
         public bool _public { get; set; }
     }
 
-    public struct Item
+    public class Item
     {
         public bool verified { get; set; }
         public int w { get; set; }
@@ -48,6 +48,8 @@ namespace PoEParse
         public string[] cosmeticMods { get; set; }
         public string note { get; set; }
         public string[] flavourText { get; set; }
+        //custom value for sending flavour text to DT
+        public string favourTextVal { get; set; }
         public string[] implicitMods { get; set; }
         public string[] craftedMods { get; set; }
         public bool duplicated { get; set; }
@@ -74,26 +76,34 @@ namespace PoEParse
         public string attr { get; set; }
     }
 
-    public struct Property1
+    public class Property1
     {
         public string name { get; set; }
         public object[][] values { get; set; }
+        //custom value for sending requirements
+        public string id { get; set; }
         public int displayMode { get; set; }
         public int type { get; set; }
     }
 
-    public struct Additionalproperty
+    public class Additionalproperty
     {
         public string name { get; set; }
         public object[][] values { get; set; }
+        //custom value for sending requirements
+        public object amount { get; set; }
+        public string id { get; set; }
         public int displayMode { get; set; }
         public float progress { get; set; }
     }
 
-    public struct Requirement
+    public class Requirement
     {
         public string name { get; set; }
         public object[][] values { get; set; }
+        //custom value for sending requirements
+        public object amount { get; set; }
+        public string id { get; set; }
         public int displayMode { get; set; }
     }
 
@@ -126,26 +136,34 @@ namespace PoEParse
         public Additionalproperty1[] additionalProperties { get; set; }
     }
 
-    public struct Property2
+    public class Property2
     {
         public string name { get; set; }
         public object[][] values { get; set; }
+        //custom value for sending properties
+        public string id { get; set; }
         public int displayMode { get; set; }
         public int type { get; set; }
     }
 
-    public struct Additionalproperty1
+    public class Additionalproperty1
     {
         public string name { get; set; }
         public object[][] values { get; set; }
+        //custom value for sending Properties
+        public object amount { get; set; }
+        public string id { get; set; }
         public int displayMode { get; set; }
         public float progress { get; set; }
     }
 
-    public struct Requirement1
+    public class Requirement1
     {
         public string name { get; set; }
         public object[][] values { get; set; }
+        //custom value for sending requirements
+        public object amount { get; set; }
+        public string id { get; set; }
         public int displayMode { get; set; }
     }
 

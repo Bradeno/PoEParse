@@ -24,9 +24,7 @@ namespace PoEParse
                 StashData root = JsonConvert.DeserializeObject<StashData>(Json_Data);
 
                 //SaveChangeId(root);
-                //SaveStashData(root);
-
-           
+                //SaveStashData(root);          
 
                 //shove all the data in datatables for processing.
                 ListEverythingTest(root);
@@ -125,8 +123,8 @@ namespace PoEParse
             List<Nextlevelrequirement1> NextLevelRequirementList2 = new List<Nextlevelrequirement1>();
 
             //Custom Tables
-            DataTable ExplicitMods_DT = new DataTable("ExplicitMods");
-            ExplicitMods_DT.Columns.AddRange(new DataColumn[]
+            DataTable Mods_DT = new DataTable("Mods");
+            Mods_DT.Columns.AddRange(new DataColumn[]
             {
                 new DataColumn("itemId"),
                 new DataColumn("modName"),
@@ -154,6 +152,22 @@ namespace PoEParse
 
                 foreach (Item item in stash.items)
                 {
+                    if (item.flavourText != null)
+                    {
+                        Item aie = new Item();
+                        aie.flavourText = item.flavourText;
+                        int len = aie.flavourText.Count();
+
+                        for (int i = 0; i < len; i++)
+                        {
+                            item.favourTextVal += item.flavourText[i] + " ";
+                        }
+                    }
+                    else
+                    {
+                        item.favourTextVal = "";
+                    }                    
+
                     ItemList.Add(item);
 
                     if (item.explicitMods != null)
@@ -173,8 +187,89 @@ namespace PoEParse
                         }
 
                         //Mods Datatable to send to SQL
-                        ExplicitMods_DT.Rows.Add(item.id, "Explicit", modValue[0], modValue[1], modValue[2], modValue[3]);
+                        Mods_DT.Rows.Add(item.id, "Explicit", modValue[0], modValue[1], modValue[2], modValue[3], modValue[4], modValue[5], modValue[6], modValue[7], modValue[8], modValue[9], modValue[10], modValue[11]);
                     }
+
+                    if (item.implicitMods != null)
+                    {
+                        String[] modValue;
+                        modValue = new String[12];
+                        modValue.DefaultIfEmpty("");
+
+                        List<String> ModsList = new List<string>();
+                        ModsList = item.implicitMods.ToList();
+
+                        int numMods = ModsList.Count();
+
+                        for (int i = 0; i < numMods; i++)
+                        {
+                            modValue[i] = ModsList[i].ToString();
+                        }
+
+                        //Mods Datatable to send to SQL
+                        Mods_DT.Rows.Add(item.id, "Implicit", modValue[0], modValue[1], modValue[2], modValue[3], modValue[4], modValue[5], modValue[6], modValue[7], modValue[8], modValue[9], modValue[10], modValue[11]);
+                    }
+
+                    if (item.craftedMods != null)
+                    {
+                        String[] modValue;
+                        modValue = new String[12];
+                        modValue.DefaultIfEmpty("");
+
+                        List<String> ModsList = new List<string>();
+                        ModsList = item.craftedMods.ToList();
+
+                        int numMods = ModsList.Count();
+
+                        for (int i = 0; i < numMods; i++)
+                        {
+                            modValue[i] = ModsList[i].ToString();
+                        }
+
+                        //Mods Datatable to send to SQL
+                        Mods_DT.Rows.Add(item.id, "Cosmetic", modValue[0], modValue[1], modValue[2], modValue[3], modValue[4], modValue[5], modValue[6], modValue[7], modValue[8], modValue[9], modValue[10], modValue[11]);
+                    }
+
+                    if (item.utilityMods != null)
+                    {
+                        String[] modValue;
+                        modValue = new String[12];
+                        modValue.DefaultIfEmpty("");
+
+                        List<String> ModsList = new List<string>();
+                        ModsList = item.utilityMods.ToList();
+
+                        int numMods = ModsList.Count();
+
+                        for (int i = 0; i < numMods; i++)
+                        {
+                            modValue[i] = ModsList[i].ToString();
+                        }
+
+                        //Mods Datatable to send to SQL
+                        Mods_DT.Rows.Add(item.id, "Utility", modValue[0], modValue[1], modValue[2], modValue[3], modValue[4], modValue[5], modValue[6], modValue[7], modValue[8], modValue[9], modValue[10], modValue[11]);
+                    }
+
+                    if (item.enchantMods != null)
+                    {
+                        String[] modValue;
+                        modValue = new String[12];
+                        modValue.DefaultIfEmpty("");
+
+                        List<String> ModsList = new List<string>();
+                        ModsList = item.enchantMods.ToList();
+
+                        int numMods = ModsList.Count();
+
+                        for (int i = 0; i < numMods; i++)
+                        {
+                            modValue[i] = ModsList[i].ToString();
+                        }
+
+                        //Mods Datatable to send to SQL
+                        Mods_DT.Rows.Add(item.id, "Enchanted", modValue[0], modValue[1], modValue[2], modValue[3], modValue[4], modValue[5], modValue[6], modValue[7], modValue[8], modValue[9], modValue[10], modValue[11]);
+                    }
+
 
                     foreach (Socket socket in item.sockets)
                     {
@@ -187,6 +282,8 @@ namespace PoEParse
 
                         foreach (Requirement1 requirement1 in socketedItem.requirements)
                         {
+                            requirement1.id = socketedItem.id;
+                            requirement1.amount = requirement1.values[0][0];
                             RequirementList2.Add(requirement1);
                         }
 
@@ -201,11 +298,14 @@ namespace PoEParse
 
                         foreach (Property2 property2 in socketedItem.properties)
                         {
+                            property2.id = socketedItem.id;
                             PropertyList2.Add(property2);
                         }
 
                         foreach (Additionalproperty1 additionalProps1 in socketedItem.additionalProperties)
                         {
+                            additionalProps1.id = socketedItem.id;
+                            additionalProps1.amount = additionalProps1.values[0][0];
                             AdditionalPropertyList2.Add(additionalProps1);
                         }
                     }
@@ -222,6 +322,7 @@ namespace PoEParse
                     {
                         foreach (Property1 property1 in item.properties)
                         {
+                            property1.id = item.id;                          
                             PropertyList1.Add(property1);
                         }
                     }
@@ -231,6 +332,8 @@ namespace PoEParse
                     {
                         foreach (Additionalproperty additionalProp in item.additionalProperties)
                         {
+                            additionalProp.id = item.id;
+                            additionalProp.amount = additionalProp.values[0][0];
                             AdditionalPropertyList.Add(additionalProp);
                         }
                     }                    
@@ -239,6 +342,8 @@ namespace PoEParse
                     {
                         foreach (Requirement requirement in item.requirements)
                         {
+                            requirement.id = item.id;
+                            requirement.amount = requirement.values[0][0];
                             RequirementList.Add(requirement);
                         }
                     }
@@ -270,27 +375,32 @@ namespace PoEParse
             if (Items_DT.Columns.Contains("properties")) { Items_DT.Columns.Remove("properties"); }            
             if (Items_DT.Columns.Contains("additionalProperties")) { Items_DT.Columns.Remove("additionalProperties"); }            
             if (Items_DT.Columns.Contains("requirements")) { Items_DT.Columns.Remove("requirements"); }
+            if (Items_DT.Columns.Contains("flavourText")) { Items_DT.Columns.Remove("flavourText"); }
+            if (Items_DT.Columns.Contains("explicitMods")) { Items_DT.Columns.Remove("explicitMods"); }
+            if (Items_DT.Columns.Contains("cosmeticMods")) { Items_DT.Columns.Remove("cosmeticMods"); }
+            if (Items_DT.Columns.Contains("implicitMods")) { Items_DT.Columns.Remove("implicitMods"); }
+            if (Items_DT.Columns.Contains("craftedMods")) { Items_DT.Columns.Remove("craftedMods"); }
+            if (Items_DT.Columns.Contains("utilityMods")) { Items_DT.Columns.Remove("utilityMods"); }
+            if (Items_DT.Columns.Contains("enchantMods")) { Items_DT.Columns.Remove("enchantMods"); }
 
-            if (Items_DT.Columns.Contains("requirements")) { }
-            SocketedItems_DT.Columns.Remove("requirements");
-            if (Items_DT.Columns.Contains("nextLevelRequirements")) { }
-            SocketedItems_DT.Columns.Remove("nextLevelRequirements");
-            if (Items_DT.Columns.Contains("properties")) { }
-            SocketedItems_DT.Columns.Remove("properties");
-            if (Items_DT.Columns.Contains("additionalProperties")) { }
-            SocketedItems_DT.Columns.Remove("additionalProperties");
+            if (SocketedItems_DT.Columns.Contains("requirements")) { SocketedItems_DT.Columns.Remove("requirements"); }
+            if (SocketedItems_DT.Columns.Contains("nextLevelRequirements")) { SocketedItems_DT.Columns.Remove("nextLevelRequirements"); }            
+            if (SocketedItems_DT.Columns.Contains("properties")) { SocketedItems_DT.Columns.Remove("properties"); }            
+            if (SocketedItems_DT.Columns.Contains("additionalProperties")) { SocketedItems_DT.Columns.Remove("additionalProperties"); }
+            if (SocketedItems_DT.Columns.Contains("socketedItems")) { SocketedItems_DT.Columns.Remove("socketedItems"); }
+
+            if (Requirements1_DT.Columns.Contains("values")) { Requirements1_DT.Columns.Remove("values"); }
+            if (Requirements2_DT.Columns.Contains("values")) { Requirements2_DT.Columns.Remove("values"); }
+
+            if (AdditionalProperties1_DT.Columns.Contains("values")) { AdditionalProperties1_DT.Columns.Remove("values"); }
+            if (AdditionalProperties2_DT.Columns.Contains("values")) { AdditionalProperties2_DT.Columns.Remove("values"); }
+
+            if (Properties1_DT.Columns.Contains("values")) { Properties1_DT.Columns.Remove("values"); }
+            if (Properties2_DT.Columns.Contains("values")) { Properties2_DT.Columns.Remove("values"); }
 
             //, "sockets", "socketedItems", "properties", "additionalProperties", "requirements");
 
         }
-
-
-
-
-
-
-
-
 
         public class ListtoDataTableConverter
         {
