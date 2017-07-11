@@ -23,7 +23,6 @@ CREATE TABLE Stashes (
   publicStash tinyint DEFAULT 0,
 )
 
-
 CREATE TABLE ChangeId (
   id int NOT NULL identity(1,1),
   nextChangeId varchar(128) NOT NULL DEFAULT(''),
@@ -46,10 +45,10 @@ CREATE TABLE Items (
   itemId varchar(128) NOT NULL DEFAULT '' PRIMARY KEY,
   name varchar(128) DEFAULT NULL,
   typeLine varchar(128) DEFAULT NULL,
-  identified tinyint NOT NULL DEFAULT 0,
-  verified tinyint NOT NULL DEFAULT 0,
-  corrupted tinyint NOT NULL DEFAULT 0,
-  lockedToCharacter tinyint DEFAULT 0,
+  identified bit NOT NULL DEFAULT 0,
+  corrupted bit NOT NULL DEFAULT 0,
+  lockedToCharacter bit DEFAULT 0,
+  secDescrText varchar(1024) null, 
   frameType tinyint DEFAULT 0,
   x smallint DEFAULT 0,
   y smallint DEFAULT 0,
@@ -57,14 +56,12 @@ CREATE TABLE Items (
   accountName nvarchar(128) NOT NULL DEFAULT '' FOREIGN KEY REFERENCES Accounts (accountName),
   stashId varchar(128) NOT NULL DEFAULT '' FOREIGN KEY REFERENCES Stashes (stashID) ON DELETE CASCADE,
   socketAmount tinyint NOT NULL DEFAULT 0,
-  linkAmount tinyint NOT NULL DEFAULT 0,
-  available tinyint NOT NULL DEFAULT 0,
-  addedTs bigint DEFAULT 0,
-  updatedTs bigint DEFAULT 0,
   flavourText varchar(1024) DEFAULT NULL,
-  price varchar(128) DEFAULT NULL,
-  crafted tinyint DEFAULT 0,
-  enchanted tinyint DEFAULT 0,
+  stackSize int not null default 1,
+  maxStackSize int not null default 1,
+  price nvarchar(128) DEFAULT NULL,
+  crafted bit DEFAULT 0,
+  enchanted bit DEFAULT 0,
 )
 
 CREATE TABLE Mods (
@@ -90,14 +87,25 @@ CREATE TABLE Requirements (
   itemId varchar(128) DEFAULT NULL FOREIGN KEY REFERENCES Items (itemId) ON DELETE CASCADE,
   requirementName varchar(128) NOT NULL DEFAULT '',
   requirementValue smallint DEFAULT 0,
-  requirementKey varchar(128) NOT NULL DEFAULT '' UNIQUE,
+  --requirementKey varchar(128) NOT NULL DEFAULT '' UNIQUE,
+  displayMode tinyint NOT NULL
 )
-
+go
 
 CREATE TABLE Sockets (
   itemId varchar(128) DEFAULT NULL FOREIGN KEY REFERENCES Items (itemId) ON DELETE CASCADE,
   socketGroup tinyint DEFAULT 0,
   socketAttr char(1) DEFAULT NULL
+ -- socketGroup2 tinyint DEFAULT 0,
+ -- socketAttr2 char(1) DEFAULT NULL,
+ -- socketGroup3 tinyint DEFAULT 0,
+ -- socketAttr3 char(1) DEFAULT NULL,
+ -- socketGroup4 tinyint DEFAULT 0,
+ -- socketAttr4 char(1) DEFAULT NULL,
+ -- socketGroup5 tinyint DEFAULT 0,
+ -- socketAttr5 char(1) DEFAULT NULL,
+ -- socketGroup6 tinyint DEFAULT 0,
+ -- socketAttr6 char(1) DEFAULT NULL
 )
 GO
 
@@ -105,41 +113,75 @@ GO
 ----------------------------------------------------------
 --Holds the JSON Next Change ID
 CREATE TYPE dbo.ChangeIdTableType AS TABLE
-	(nextChangeId VARCHAR(128), stashes NVARCHAR(128))
+	(nextChangeId VARCHAR(128))
 GO
 
 --Holds Stash & Account Information
-CREATE TYPE dbo.StashesParseType AS TABLE
+CREATE TYPE dbo.StashesTableType AS TABLE
 	(accountName NVARCHAR(128), lastCharacterName NVARCHAR(128), id VARCHAR(128), stash NVARCHAR(128), 
-	stashType VARCHAR(128), items NVARCHAR(128), _public BIT)
+	stashType VARCHAR(128), _public BIT)
 GO
 
---Holds Item Information (From Items Struct)
-create type dbo.ItemsParseType as table
+
+--Holds Item Information
+create type dbo.ItemsTableType as table
+	(w tinyint, h tinyint, ilvl smallint, icon varchar(1024), league varchar(128), id varchar(128), [name] nvarchar(128),
+	typeLine varchar(128), identified bit, corrupted bit, lockedToCharacter bit, secDescrText varchar(1024),
+	frameType tinyint, x smallint, y smallint, inventoryId varchar(128), accountName nvarchar(128), stashId varchar(128),
+	note nvarchar(128), flavourTextVal varchar(1024), socketAmount tinyint, isCrafted bit, isEnchanted bit, 
+	stackSize int, maxStackSize int)
+go
+
+--Holds Socketed Item Information
+create type dbo.SocketedItemsTableType as table
 	(verified bit, w bit, h bit, ilvl smallint, icon varchar(1024), support bit, league varchar(128), id varchar(128), name varchar(128),
-	typeLine varchar(128), identified bit, corrupted bit, lockedToCharacter bit, secDescrText varchar(128), explicitMods nvarchar(128), descrText varchar(128),
-	frameType bit, x smallint, y smallint, inventoryId varchar(128), cosmeticMods nvarchar(128), note nvarchar(128), flavourText varchar(1024), implicitMods nvarchar(128),
-	craftedMods nvarchar(128), duplicated bit, talismanTier int, isRelic bit, utilityMods nvarchar(128), enchantMods nvarchar(128), stackSize int, maxStackSize int, artFileName nvarchar(128),
-	prophecyText varchar(128), prophecyDiffText varchar(128), sockets nvarchar(128), socketedItems nvarchar(128), nextLevelRequirements nvarchar(128), properties nvarchar(128), 
-	additionalProperties nvarchar(128), requirements nvarchar(128))--, accountName nvarchar(128), stashId varchar(128))
+	typeLine varchar(128), identified bit, corrupted bit, lockedToCharacter bit, secDescrText varchar(128), descrText varchar(128),
+	frameType tinyint, socket int, colour char(1))
+go
+
+--Holds item Sockets Data
+create type dbo.SocketTableType as table
+	(id varchar(128), [group] tinyint, attr char(1))
+go
+
+--Holds item Properties Data
+create type dbo.PropertiesTableType as table
+	([name] varchar(128), id varchar(128), displayMode tinyint, [type] tinyint)
+go
+
+--Holds Extended Item Properties
+create type dbo.AdditionalPropertiesTableType as table
+	([name] varchar(128), amount nvarchar(128), id varchar(128), displayMode tinyint, progress float)
+go
+
+--Holds Requirements Information
+create type dbo.RequirementsTableType as table
+	([name] varchar(128), amount smallint, id varchar(128), displayMode tinyint)
 go
 
 
 --Create Stored Procedures to handle Data Tables.
-
 CREATE PROCEDURE usp_AddChangeId
-@newId dbo.ChangeIdTableType READONLY
+@changeId varchar(128)
 AS
 BEGIN
-	DECLARE @nextId VARCHAR(128)
-	SET @nextId = (SELECT nextChangeId FROM @newId)
 	INSERT INTO ChangeId (nextChangeId, processed)
-	VALUES(@nextId, 1)
+	VALUES(@changeId, 0)
+END
+GO
+
+CREATE PROCEDURE usp_SetChangeIdProcessed
+@changeId varchar(128)
+AS
+BEGIN
+	UPDATE ChangeId
+	SET processed = 1
+	WHERE nextChangeId = @changeId
 END
 GO
 
 CREATE PROCEDURE usp_StashParse
-@newStashData StashesParseType READONLY
+@newStashData StashesTableType READONLY
 AS
 BEGIN
 --Update Account Table	
@@ -169,22 +211,20 @@ END
 GO
 
 
-
 CREATE PROCEDURE usp_BaseItemsParse
-@newItemsData ItemsParseType readonly,
-@accountName nvarchar(128),
-@stashId varchar(128)
+@newItemsData ItemsTableType readonly
 AS
 BEGIN
 	MERGE Leagues WITH (HOLDLOCK) AS L
-	USING (SELECT DISTINCT league FROM @newItemsData nid) AS poed
+	USING (SELECT DISTINCT league FROM @newItemsData) 
+	AS poed (league)
 		ON poed.league = L.leagueName
 	WHEN NOT MATCHED THEN
 		INSERT (leagueName, active, poeTradeId)
 		VALUES (poed.league, 1, poed.league);
 
 --Update Items Table	
-	MERGE Items2 WITH (HOLDLOCK) AS I
+	MERGE Items WITH (HOLDLOCK) AS I
 	USING (SELECT * FROM @newItemsData nid) AS poed
 		ON poed.id = I.itemId
 	WHEN MATCHED THEN
@@ -194,32 +234,33 @@ BEGIN
 				I.ilvl = poed.ilvl,
 				I.icon = poed.icon,
 				I.league = poed.league,
+				I.itemId = poed.id,
 				I.name = poed.name,
 				I.typeLine = poed.typeLine,
 				I.identified = poed.identified,
-				I.verified = poed.verified,
 				I.corrupted = poed.corrupted,
 				I.lockedToCharacter = poed.lockedToCharacter,
+				I.secDescrText = poed.secDescrText,
 				I.frameType = poed.frameType,
 				I.x = poed.x,
 				I.y = poed.y,
 				I.inventoryId = poed.inventoryId,
-				I.accountName = @accountName,
-				I.stashId = @stashId,
-				--I.socketAmount = poed.socketAmount,
-				--I.linkAmount = poed.linkAmount,
-				--I.available = poed.available,
-				--I.addedTs = poed.addedTs,
-				--I.updatedTs = poed.updatedTs,
-				I.flavourText = poed.flavourText
-				--I.price = poed.price,
-				--I.crafted = poed.crafted,
-				--I.enchanted = poed.enchanted
+				I.accountName = poed.accountName,
+				I.stashId = poed.stashId,
+				I.socketAmount = poed.socketAmount,
+				I.flavourText = poed.flavourTextVal,
+				I.stackSize = poed.stackSize,
+				I.maxStackSize = poed.maxStackSize,
+				I.price = poed.note,
+				I.crafted = poed.isCrafted,
+				I.enchanted = poed.isEnchanted
 		WHEN NOT MATCHED THEN
-			INSERT (w, h, ilvl, icon, league, itemId, name, typeLine, identified, verified, corrupted, lockedToCharacter, frameType, x, y, inventoryId, accountName, stashId, 
-						socketAmount, linkAmount, available, addedTs, updatedTs, flavourText, price, crafted, enchanted)
-			VALUES (poed.w, poed.h, poed.ilvl, poed.icon, poed.league, poed.id, poed.name, poed.typeLine, poed.identified, poed.verified, poed.corrupted, poed.lockedToCharacter, 
-					poed.frameType, poed.x, poed.y, poed.inventoryId, @accountName, @stashId, 0, 0, 0, 0, 0, 
-					poed.flavourText, 0, 0, 0);
+			INSERT (w, h, ilvl, icon, league, itemId, name, typeLine, identified, corrupted, lockedToCharacter, secDescrText, frameType, x, y, inventoryId, accountName, stashId, 
+						socketAmount, flavourText, stackSize, maxStackSize, price, crafted, enchanted)
+			VALUES (poed.w, poed.h, poed.ilvl, poed.icon, poed.league, poed.id, poed.name, poed.typeLine, poed.identified, poed.corrupted, poed.lockedToCharacter, poed.secDescrText,
+					poed.frameType, poed.x, poed.y, poed.inventoryId, poed.accountName, poed.stashId, poed.socketAmount, poed.flavourTextVal, poed.stackSize, poed.maxStackSize, poed.note, 
+					poed.isCrafted, poed.isEnchanted);
+
+
 END
 GO
