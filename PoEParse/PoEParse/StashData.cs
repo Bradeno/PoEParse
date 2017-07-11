@@ -45,16 +45,32 @@ namespace PoEParse
         public int x { get; set; }
         public int y { get; set; }
         public string inventoryId { get; set; }
+
+        //add account name & stash id as reference.
+        public string accountName { get; set; }
+        public string stashId { get; set; }
+
         public string[] cosmeticMods { get; set; }
         public string note { get; set; }
         public string[] flavourText { get; set; }
+
         //custom value for sending flavour text to DT
-        public string favourTextVal { get; set; }
+        public string flavourTextVal { get; set; }
+
+        //Socket Amount - Calculated in Loop
+        public int socketAmount { get; set; }
+
+        //Specific information on individual items...
+        [System.ComponentModel.DefaultValue(false)]
+            public bool isCrafted { get; set; }
+        [System.ComponentModel.DefaultValue(false)]
+            public bool isEnchanted { get; set; }
+
         public string[] implicitMods { get; set; }
         public string[] craftedMods { get; set; }
         public bool duplicated { get; set; }
-        public int talismanTier { get; set; }
-        public bool isRelic { get; set; }
+        //public int talismanTier { get; set; }
+        //public bool isRelic { get; set; }
         public string[] utilityMods { get; set; }
         public string[] enchantMods { get; set; }
         public int stackSize { get; set; }
@@ -70,8 +86,9 @@ namespace PoEParse
         public Requirement[] requirements { get; set; }
     }
 
-    public struct Socket
+    public class Socket
     {
+        public string id { get; set; }
         public int group { get; set; }
         public string attr { get; set; }
     }

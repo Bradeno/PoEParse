@@ -9,6 +9,7 @@ using System.Net;
 using System.Data;
 using System.Reflection;
 using Newtonsoft.Json.Linq;
+using System.Threading;
 
 namespace PoEParse
 {
@@ -27,55 +28,22 @@ namespace PoEParse
                 //SaveStashData(root);          
 
                 //shove all the data in datatables for processing.
-                ListEverythingTest(root);
+                if (root.next_change_id == Get_Next_Change_ID())
+                {
+                    Console.WriteLine("Waiting for new Data");
+                }
+
+                else
+                {
+                    ListEverythingTest(root);
+                }                
 
             }
         }
 
-        public void SaveChangeId(StashData root)
-        {
-            List<StashData> ChangeIdList = new List<StashData>();
-            ChangeIdList.Add(root);
-
-            ListtoDataTableConverter converter = new ListtoDataTableConverter();
-            DataTable dt = converter.ToDataTable(ChangeIdList);
-
-            using (SqlConnection conn = new SqlConnection(SQLConnectionString))
-            using (SqlCommand comm = new SqlCommand("usp_AddChangeId", conn))
-            {
-                conn.Open();
-                comm.CommandType = CommandType.StoredProcedure;
-                comm.Parameters.AddWithValue("@newId", dt).SqlDbType = SqlDbType.Structured;
-                comm.ExecuteNonQuery();
-                comm.Parameters.Clear();
-            }
-        }
 
 
-        public void SaveStashData(StashData root)
-        {
-            List<Stash> StashDataList = new List<Stash>();
-            foreach (Stash s in root.stashes)
-            {
-                StashDataList.Add(s);
-                //For each Stash, transfer it's set of items.
-                //SaveItemData(s);
-            }
-            
-            ListtoDataTableConverter converter = new ListtoDataTableConverter();
-            DataTable dt = converter.ToDataTable(StashDataList);
-
-            using (SqlConnection conn = new SqlConnection(SQLConnectionString))
-            using (SqlCommand comm = new SqlCommand("usp_StashParse", conn))
-            {
-                conn.Open();
-                comm.CommandType = CommandType.StoredProcedure;
-                comm.Parameters.AddWithValue("@newStashData", dt).SqlDbType = SqlDbType.Structured;
-                comm.ExecuteNonQuery();
-                comm.Parameters.Clear();
-            }     
         
-        }
 
         public void SaveItemData(Stash rootStash)
         {
@@ -140,18 +108,37 @@ namespace PoEParse
                 new DataColumn("modValue10"),
                 new DataColumn("modValue11"),
                 new DataColumn("modValue12"),
+                new DataColumn("modValue13"),
+                new DataColumn("modValue14"),
+                new DataColumn("modValue15")
             });
 
             //next change ID
-            ChangeIdList.Add(root);
-
+            if (root.next_change_id != null)
+            {
+                ChangeIdList.Add(root);
+                SaveChangeId(root.next_change_id);
+            }
+            else
+                return;            
+            
             //start megaloop
             foreach (Stash stash in root.stashes)
             {
-                StashList.Add(stash);
+                //Glitches in the system cause null account names, avoid them.
+                if (stash.accountName != null)
+                {
+                    StashList.Add(stash);
+                }                
 
                 foreach (Item item in stash.items)
                 {
+
+                    item.accountName = stash.accountName;
+                    item.stashId = stash.id;
+                    item.name = item.name.Replace("<<set:MS>><<set:M>><<set:S>>", "");
+                    item.typeLine = item.typeLine.Replace("<<set:MS>><<set:M>><<set:S>>", "");
+
                     if (item.flavourText != null)
                     {
                         Item aie = new Item();
@@ -160,20 +147,21 @@ namespace PoEParse
 
                         for (int i = 0; i < len; i++)
                         {
-                            item.favourTextVal += item.flavourText[i] + " ";
+                            item.flavourTextVal += item.flavourText[i] + " ";
                         }
                     }
                     else
                     {
-                        item.favourTextVal = "";
-                    }                    
+                        item.flavourTextVal = "";
+                    }                  
+                    
 
                     ItemList.Add(item);
 
                     if (item.explicitMods != null)
                     {
                         String[] modValue;
-                        modValue = new String[12];
+                        modValue = new String[15];
                         modValue.DefaultIfEmpty("");
 
                         List<String> ModsList = new List<string>();
@@ -228,6 +216,8 @@ namespace PoEParse
 
                         //Mods Datatable to send to SQL
                         Mods_DT.Rows.Add(item.id, "Cosmetic", modValue[0], modValue[1], modValue[2], modValue[3], modValue[4], modValue[5], modValue[6], modValue[7], modValue[8], modValue[9], modValue[10], modValue[11]);
+
+                        item.isCrafted = true;
                     }
 
                     if (item.utilityMods != null)
@@ -268,13 +258,22 @@ namespace PoEParse
 
                         //Mods Datatable to send to SQL
                         Mods_DT.Rows.Add(item.id, "Enchanted", modValue[0], modValue[1], modValue[2], modValue[3], modValue[4], modValue[5], modValue[6], modValue[7], modValue[8], modValue[9], modValue[10], modValue[11]);
+
+                        item.isEnchanted = true;
                     }
 
+
+                    //Count Iterations through the socket loop to get our socket count.
+                    int socks = 0;
 
                     foreach (Socket socket in item.sockets)
                     {
+                        socket.id = item.id;
                         SocketList.Add(socket);
+                        socks++;
                     }
+
+                    item.socketAmount = socks;
 
                     foreach (Socketeditem socketedItem in item.socketedItems)
                     {
@@ -302,12 +301,15 @@ namespace PoEParse
                             PropertyList2.Add(property2);
                         }
 
-                        foreach (Additionalproperty1 additionalProps1 in socketedItem.additionalProperties)
+                        if (socketedItem.additionalProperties != null)
                         {
-                            additionalProps1.id = socketedItem.id;
-                            additionalProps1.amount = additionalProps1.values[0][0];
-                            AdditionalPropertyList2.Add(additionalProps1);
-                        }
+                            foreach (Additionalproperty1 additionalProps1 in socketedItem.additionalProperties)
+                            {
+                                additionalProps1.id = socketedItem.id;
+                                additionalProps1.amount = additionalProps1.values[0][0];
+                                AdditionalPropertyList2.Add(additionalProps1);
+                            }
+                        }                        
                     }
 
                     if (item.nextLevelRequirements != null)
@@ -352,7 +354,7 @@ namespace PoEParse
             }
 
             //Convert each list to a datatable
-            DataTable ChangeId_DT = dataTableConverter.ToDataTable(ChangeIdList);
+            
             DataTable Stashes_DT = dataTableConverter.ToDataTable(StashList);
             DataTable Items_DT = dataTableConverter.ToDataTable(ItemList);
             DataTable SocketedItems_DT = dataTableConverter.ToDataTable(SocketedItemList);
@@ -367,7 +369,9 @@ namespace PoEParse
             DataTable NextLevelRequirement2_DT = dataTableConverter.ToDataTable(NextLevelRequirementList2);
 
             //Clean up the DataTables
-            Stashes_DT.Columns.Remove("items");
+            if (Stashes_DT.Columns.Contains("items")) { Stashes_DT.Columns.Remove("items"); }
+
+            //if (ChangeId_DT.Columns.Contains("stashes")) { ChangeId_DT.Columns.Remove("stashes"); }
 
             if (Items_DT.Columns.Contains("sockets")){ Items_DT.Columns.Remove("sockets"); }            
             if (Items_DT.Columns.Contains("socketedItems")) { Items_DT.Columns.Remove("socketedItems"); }            
@@ -382,12 +386,22 @@ namespace PoEParse
             if (Items_DT.Columns.Contains("craftedMods")) { Items_DT.Columns.Remove("craftedMods"); }
             if (Items_DT.Columns.Contains("utilityMods")) { Items_DT.Columns.Remove("utilityMods"); }
             if (Items_DT.Columns.Contains("enchantMods")) { Items_DT.Columns.Remove("enchantMods"); }
+            if (Items_DT.Columns.Contains("verified")) { Items_DT.Columns.Remove("verified"); }
+            if (Items_DT.Columns.Contains("descrText")) { Items_DT.Columns.Remove("descrText"); }
+            if (Items_DT.Columns.Contains("duplicated")) { Items_DT.Columns.Remove("duplicated"); }
+            if (Items_DT.Columns.Contains("artFilename")) { Items_DT.Columns.Remove("artFilename"); }
+            if (Items_DT.Columns.Contains("prophecyText")) { Items_DT.Columns.Remove("prophecyText"); }
+            if (Items_DT.Columns.Contains("prophecyDiffText")) { Items_DT.Columns.Remove("prophecyDiffText"); }
+            if (Items_DT.Columns.Contains("support")) { Items_DT.Columns.Remove("support"); }
+
 
             if (SocketedItems_DT.Columns.Contains("requirements")) { SocketedItems_DT.Columns.Remove("requirements"); }
             if (SocketedItems_DT.Columns.Contains("nextLevelRequirements")) { SocketedItems_DT.Columns.Remove("nextLevelRequirements"); }            
             if (SocketedItems_DT.Columns.Contains("properties")) { SocketedItems_DT.Columns.Remove("properties"); }            
             if (SocketedItems_DT.Columns.Contains("additionalProperties")) { SocketedItems_DT.Columns.Remove("additionalProperties"); }
             if (SocketedItems_DT.Columns.Contains("socketedItems")) { SocketedItems_DT.Columns.Remove("socketedItems"); }
+            if (SocketedItems_DT.Columns.Contains("explicitMods")) { SocketedItems_DT.Columns.Remove("explicitMods"); }
+            if (SocketedItems_DT.Columns.Contains("sockets")) { SocketedItems_DT.Columns.Remove("sockets"); }
 
             if (Requirements1_DT.Columns.Contains("values")) { Requirements1_DT.Columns.Remove("values"); }
             if (Requirements2_DT.Columns.Contains("values")) { Requirements2_DT.Columns.Remove("values"); }
@@ -398,9 +412,102 @@ namespace PoEParse
             if (Properties1_DT.Columns.Contains("values")) { Properties1_DT.Columns.Remove("values"); }
             if (Properties2_DT.Columns.Contains("values")) { Properties2_DT.Columns.Remove("values"); }
 
-            //, "sockets", "socketedItems", "properties", "additionalProperties", "requirements");
+            Thread myThread = new System.Threading.Thread(delegate () {
+                //Your code here
+
+                using (SqlConnection conn = new SqlConnection(SQLConnectionString))
+                {
+                    SaveStashData(Stashes_DT, conn);
+                    SaveItemsData(Items_DT, conn);
+                    //Last
+                    ProcessedChangeId(root.next_change_id, conn);
+                }
+                
+            });
+            myThread.Start();
+            myThread.Join();
+
 
         }
+
+
+        public void SaveChangeId(string id)
+        {
+            using (SqlConnection conn = new SqlConnection(SQLConnectionString))
+            using (SqlCommand comm = new SqlCommand("usp_AddChangeId", conn))
+            {
+                conn.Open();
+                comm.CommandType = CommandType.StoredProcedure;
+                comm.Parameters.AddWithValue("@changeId", id);
+                comm.ExecuteNonQuery();
+                comm.Parameters.Clear();
+                conn.Close();
+            }
+        }
+
+        public void ProcessedChangeId(string id, SqlConnection conn)
+        {
+            using (SqlCommand comm = new SqlCommand("usp_SetChangeIdProcessed", conn))
+            {
+                conn.Open();
+                comm.CommandType = CommandType.StoredProcedure;
+                comm.Parameters.AddWithValue("@changeId", id);
+                comm.ExecuteNonQuery();
+                comm.Parameters.Clear();
+                conn.Close();
+            }
+        }
+
+        public string Get_Next_Change_ID()
+        {
+            using (SqlConnection conn = new SqlConnection(SQLConnectionString))
+            using (SqlCommand comm = new SqlCommand("SELECT TOP 1 nextChangeId FROM ChangeId ORDER BY id DESC", conn))
+            {
+                conn.Open();
+                return (String)(comm.ExecuteScalar());
+            }
+        }
+
+        public void SaveStashData(DataTable DT, SqlConnection conn)
+        {
+            using (SqlCommand comm = new SqlCommand("usp_StashParse", conn))
+            {
+                conn.Open();
+                comm.CommandType = CommandType.StoredProcedure;
+                comm.Parameters.AddWithValue("@newStashData", DT).SqlDbType = SqlDbType.Structured;
+                comm.ExecuteNonQuery();
+                comm.Parameters.Clear();
+                conn.Close();
+            }
+
+        }
+
+        public void SaveItemsData(DataTable DT, SqlConnection conn)
+        {
+            using (SqlCommand comm = new SqlCommand("usp_BaseItemsParse", conn))
+            {
+                conn.Open();
+                comm.CommandType = CommandType.StoredProcedure;
+                comm.Parameters.AddWithValue("@newItemsData", DT).SqlDbType = SqlDbType.Structured;
+                comm.ExecuteNonQuery();
+                comm.Parameters.Clear();
+                conn.Close();
+            }
+
+        }
+
+
+        public static void Print_sql_error(SqlException ex)
+        {
+            Console.WriteLine("Error No: " + ex.Number + " - " + ex.Message);
+            Console.WriteLine("Error State: " + ex.State);
+            Console.WriteLine("Error Data: " + ex.Data);
+            Console.WriteLine("more: " + ex.GetBaseException());
+            Console.WriteLine("more: " + ex.Data);
+            Console.WriteLine("more: " + ex.LineNumber + ex.Source);
+        }
+
+
 
         public class ListtoDataTableConverter
         {
@@ -428,14 +535,6 @@ namespace PoEParse
                 return dataTable;
             }
         }
-
-
-        string GetNextStashId(SqlConnection conn)
-        {
-            string nextId = "";
-            return (nextId);
-        }
-
 
     }
 }
