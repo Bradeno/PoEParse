@@ -275,8 +275,13 @@ namespace PoEParse
 
                     item.socketAmount = socks;
 
+
+                    /*
+
                     foreach (Socketeditem socketedItem in item.socketedItems)
                     {
+                        socketedItem.accountName = stash.accountName;
+                        socketedItem.stashId = stash.id;
                         SocketedItemList.Add(socketedItem);
 
                         foreach (Requirement1 requirement1 in socketedItem.requirements)
@@ -290,6 +295,8 @@ namespace PoEParse
                         {
                             foreach (Nextlevelrequirement nextLevelReq in socketedItem.nextLevelRequirements)
                             {
+                                nextLevelReq.amount = nextLevelReq.values[0][0];
+                                nextLevelReq.id = socketedItem.id;
                                 NextLevelRequirementList.Add(nextLevelReq);
                             }
 
@@ -309,14 +316,38 @@ namespace PoEParse
                                 additionalProps1.amount = additionalProps1.values[0][0];
                                 AdditionalPropertyList2.Add(additionalProps1);
                             }
-                        }                        
+                        }
+
+                        if (socketedItem.explicitMods != null)
+                        {
+                            String[] modValue;
+                            modValue = new String[12];
+                            modValue.DefaultIfEmpty("");
+
+                            List<String> ModsList = new List<string>();
+                            ModsList = socketedItem.explicitMods.ToList();
+
+                            int numMods = ModsList.Count();
+
+                            for (int i = 0; i < numMods; i++)
+                            {
+                                modValue[i] = ModsList[i].ToString();
+                            }
+
+                            //Mods Datatable to send to SQL
+                            Mods_DT.Rows.Add(item.id, "Explicit", modValue[0], modValue[1], modValue[2], modValue[3], modValue[4], modValue[5], modValue[6], modValue[7], modValue[8], modValue[9], modValue[10], modValue[11]);
+                        }
                     }
+
+                    */
 
                     if (item.nextLevelRequirements != null)
                     {
                         foreach (Nextlevelrequirement1 nextLevelReq1 in item.nextLevelRequirements)
                         {
-                            //NextLevelRequirementList2.Add(nextLevelReq1);
+                            nextLevelReq1.id = item.id;
+                            nextLevelReq1.amount = nextLevelReq1.values[0][0];
+                            NextLevelRequirementList2.Add(nextLevelReq1);
                         }
                     }                    
 
@@ -357,15 +388,15 @@ namespace PoEParse
             
             DataTable Stashes_DT = dataTableConverter.ToDataTable(StashList);
             DataTable Items_DT = dataTableConverter.ToDataTable(ItemList);
-            DataTable SocketedItems_DT = dataTableConverter.ToDataTable(SocketedItemList);
+            //DataTable SocketedItems_DT = dataTableConverter.ToDataTable(SocketedItemList);
             DataTable Sockets_DT = dataTableConverter.ToDataTable(SocketList);
-            DataTable Properties1_DT = dataTableConverter.ToDataTable(PropertyList1);
-            DataTable Properties2_DT = dataTableConverter.ToDataTable(PropertyList2);
-            DataTable AdditionalProperties1_DT = dataTableConverter.ToDataTable(AdditionalPropertyList);
-            DataTable AdditionalProperties2_DT = dataTableConverter.ToDataTable(AdditionalPropertyList2);
-            DataTable Requirements1_DT = dataTableConverter.ToDataTable(RequirementList);
-            DataTable Requirements2_DT = dataTableConverter.ToDataTable(RequirementList2);                 
-            DataTable NextLevelRequirement1_DT = dataTableConverter.ToDataTable(NextLevelRequirementList);
+            DataTable Properties_DT = dataTableConverter.ToDataTable(PropertyList1);
+            //DataTable Properties2_DT = dataTableConverter.ToDataTable(PropertyList2);
+            DataTable AdditionalProperties_DT = dataTableConverter.ToDataTable(AdditionalPropertyList);
+            //DataTable AdditionalProperties2_DT = dataTableConverter.ToDataTable(AdditionalPropertyList2);
+            DataTable Requirements_DT = dataTableConverter.ToDataTable(RequirementList);
+            //DataTable Requirements2_DT = dataTableConverter.ToDataTable(RequirementList2);                 
+            DataTable NextLevelRequirement_DT = dataTableConverter.ToDataTable(NextLevelRequirementList);
             DataTable NextLevelRequirement2_DT = dataTableConverter.ToDataTable(NextLevelRequirementList2);
 
             //Clean up the DataTables
@@ -394,6 +425,7 @@ namespace PoEParse
             if (Items_DT.Columns.Contains("prophecyDiffText")) { Items_DT.Columns.Remove("prophecyDiffText"); }
             if (Items_DT.Columns.Contains("support")) { Items_DT.Columns.Remove("support"); }
 
+            /*
 
             if (SocketedItems_DT.Columns.Contains("requirements")) { SocketedItems_DT.Columns.Remove("requirements"); }
             if (SocketedItems_DT.Columns.Contains("nextLevelRequirements")) { SocketedItems_DT.Columns.Remove("nextLevelRequirements"); }            
@@ -402,23 +434,69 @@ namespace PoEParse
             if (SocketedItems_DT.Columns.Contains("socketedItems")) { SocketedItems_DT.Columns.Remove("socketedItems"); }
             if (SocketedItems_DT.Columns.Contains("explicitMods")) { SocketedItems_DT.Columns.Remove("explicitMods"); }
             if (SocketedItems_DT.Columns.Contains("sockets")) { SocketedItems_DT.Columns.Remove("sockets"); }
+            if (SocketedItems_DT.Columns.Contains("verified")) { SocketedItems_DT.Columns.Remove("verified"); }
+            if (SocketedItems_DT.Columns.Contains("socketAmount")) { SocketedItems_DT.Columns.Remove("socketAmount"); }
+            if (SocketedItems_DT.Columns.Contains("descrText")) { SocketedItems_DT.Columns.Remove("descrText"); }
+            if (SocketedItems_DT.Columns.Contains("socket")) { SocketedItems_DT.Columns.Remove("socket"); }
+            
+             */
 
-            if (Requirements1_DT.Columns.Contains("values")) { Requirements1_DT.Columns.Remove("values"); }
-            if (Requirements2_DT.Columns.Contains("values")) { Requirements2_DT.Columns.Remove("values"); }
+            if (Requirements_DT.Columns.Contains("values")) { Requirements_DT.Columns.Remove("values"); }
+            //if (Requirements2_DT.Columns.Contains("values")) { Requirements2_DT.Columns.Remove("values"); }
 
-            if (AdditionalProperties1_DT.Columns.Contains("values")) { AdditionalProperties1_DT.Columns.Remove("values"); }
-            if (AdditionalProperties2_DT.Columns.Contains("values")) { AdditionalProperties2_DT.Columns.Remove("values"); }
+            if (AdditionalProperties_DT.Columns.Contains("values")) { AdditionalProperties_DT.Columns.Remove("values"); }
+           //if (AdditionalProperties2_DT.Columns.Contains("values")) { AdditionalProperties2_DT.Columns.Remove("values"); }
 
-            if (Properties1_DT.Columns.Contains("values")) { Properties1_DT.Columns.Remove("values"); }
-            if (Properties2_DT.Columns.Contains("values")) { Properties2_DT.Columns.Remove("values"); }
+            if (Properties_DT.Columns.Contains("values")) { Properties_DT.Columns.Remove("values"); }
+            //if (Properties2_DT.Columns.Contains("values")) { Properties2_DT.Columns.Remove("values"); }
 
-            Thread myThread = new System.Threading.Thread(delegate () {
+            if (NextLevelRequirement_DT.Columns.Contains("values")) { NextLevelRequirement_DT.Columns.Remove("values"); }
+            if (NextLevelRequirement2_DT.Columns.Contains("values")) { NextLevelRequirement2_DT.Columns.Remove("values"); }
+
+            //Combine Necessary Data Tables
+            //Note: We don't really need information on socketed items, nobody sells the items within the sockets.
+            /*
+            foreach (DataRow dt_row in Requirements2_DT.Rows)
+            {
+                Requirements_DT.ImportRow(dt_row);
+            }
+
+            
+            foreach (DataRow dt_row in AdditionalProperties2_DT.Rows)
+            {
+                AdditionalProperties_DT.ImportRow(dt_row);
+            }
+            
+
+            foreach (DataRow dt_row in Properties2_DT.Rows)
+            {
+                Properties_DT.ImportRow(dt_row);
+            }
+
+            
+            foreach (DataRow dt_row in NextLevelRequirement2_DT.Rows)
+            {
+                NextLevelRequirement_DT.ImportRow(dt_row);
+            }
+            
+
+            //Put ALL requirements into one Table.
+            foreach (DataRow dt_row in NextLevelRequirement_DT.Rows)
+            {
+                Requirements_DT.ImportRow(dt_row);
+            }
+
+            */
+            
+                  Thread myThread = new System.Threading.Thread(delegate () {
                 //Your code here
 
                 using (SqlConnection conn = new SqlConnection(SQLConnectionString))
                 {
                     SaveStashData(Stashes_DT, conn);
                     SaveItemsData(Items_DT, conn);
+                    SaveSocketData(Sockets_DT, conn);
+                    //SavePropertiesData(Properties_DT, conn);
                     //Last
                     ProcessedChangeId(root.next_change_id, conn);
                 }
@@ -489,6 +567,35 @@ namespace PoEParse
                 conn.Open();
                 comm.CommandType = CommandType.StoredProcedure;
                 comm.Parameters.AddWithValue("@newItemsData", DT).SqlDbType = SqlDbType.Structured;
+                comm.ExecuteNonQuery();
+                comm.Parameters.Clear();
+                conn.Close();
+            }
+
+        }
+
+
+        public void SavePropertiesData(DataTable DT, SqlConnection conn)
+        {
+            using (SqlCommand comm = new SqlCommand("usp_PropertiesParse", conn))
+            {
+                conn.Open();
+                comm.CommandType = CommandType.StoredProcedure;
+                comm.Parameters.AddWithValue("@newPropertiesData", DT).SqlDbType = SqlDbType.Structured;
+                comm.ExecuteNonQuery();
+                comm.Parameters.Clear();
+                conn.Close();
+            }
+
+        }
+
+        public void SaveSocketData(DataTable DT, SqlConnection conn)
+        {
+            using (SqlCommand comm = new SqlCommand("usp_SocketsParse", conn))
+            {
+                conn.Open();
+                comm.CommandType = CommandType.StoredProcedure;
+                comm.Parameters.AddWithValue("@newSocketData", DT).SqlDbType = SqlDbType.Structured;
                 comm.ExecuteNonQuery();
                 comm.Parameters.Clear();
                 conn.Close();

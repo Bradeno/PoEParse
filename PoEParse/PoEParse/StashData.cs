@@ -124,7 +124,7 @@ namespace PoEParse
         public int displayMode { get; set; }
     }
 
-    public struct Socketeditem
+    public class Socketeditem
     {
         public bool verified { get; set; }
         public int w { get; set; }
@@ -135,6 +135,13 @@ namespace PoEParse
         public string league { get; set; }
         public string id { get; set; }
         public object[] sockets { get; set; }
+
+        //Socket Amount - Calculated in Loop
+        public int socketAmount { get; set; }
+
+        public string accountName { get; set; }
+        public string stashId { get; set; }
+
         public string name { get; set; }
         public string typeLine { get; set; }
         public bool identified { get; set; }
@@ -184,17 +191,23 @@ namespace PoEParse
         public int displayMode { get; set; }
     }
 
-    public struct Nextlevelrequirement
+    public class Nextlevelrequirement
     {
         public string name { get; set; }
         public object[][] values { get; set; }
+        //Custom Value for sending NextLevelReqs
+        public object amount { get; set; }
+        public string id { get; set; }
         public int displayMode { get; set; }
     }
 
-    public struct Nextlevelrequirement1
+    public class Nextlevelrequirement1
     {
         public string name { get; set; }
         public object[][] values { get; set; }
+        //Custom Value for sending NextLevelReqs
+        public object amount { get; set; }
+        public string id { get; set; }
         public int displayMode { get; set; }
     }
 }
