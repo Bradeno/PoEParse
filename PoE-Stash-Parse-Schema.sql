@@ -78,8 +78,17 @@ CREATE TABLE Mods (
 CREATE TABLE Properties (
   itemId varchar(128) DEFAULT NULL FOREIGN KEY REFERENCES Items (itemId) ON DELETE CASCADE,
   propertyName varchar(128) NOT NULL DEFAULT '',
-  propertyValue1 varchar(128) DEFAULT '',
-  propertyValue2 varchar(128) DEFAULT ''
+  displayMode smallint DEFAULT 0,
+  propertyType smallint DEFAULT 0
+)
+
+
+CREATE TABLE Exp_Properties (
+  itemId varchar(128) DEFAULT NULL FOREIGN KEY REFERENCES Items (itemId) ON DELETE CASCADE,
+  propertyName varchar(128) NOT NULL DEFAULT '',
+  amount varchar(128) DEFAULT '0/0',
+  displayMode smallint DEFAULT 0,
+  progress float DEFAULT 0.00
 )
 
 
@@ -134,10 +143,11 @@ go
 
 --Holds Socketed Item Information
 create type dbo.SocketedItemsTableType as table
-	(verified bit, w bit, h bit, ilvl smallint, icon varchar(1024), support bit, league varchar(128), id varchar(128), name varchar(128),
-	typeLine varchar(128), identified bit, corrupted bit, lockedToCharacter bit, secDescrText varchar(128), descrText varchar(128),
-	frameType tinyint, socket int, colour char(1))
+	(w tinyint, h tinyint, ilvl smallint, icon varchar(1024), league varchar(128), id varchar(128), accountName nvarchar(128), stashId varchar(128), [name] nvarchar(128),
+	typeLine varchar(128), identified bit, corrupted bit, lockedToCharacter bit, secDescrText varchar(1024),
+	frameType tinyint, colour char(1))
 go
+
 
 --Holds item Sockets Data
 create type dbo.SocketTableType as table
@@ -146,12 +156,12 @@ go
 
 --Holds item Properties Data
 create type dbo.PropertiesTableType as table
-	([name] varchar(128), id varchar(128), displayMode tinyint, [type] tinyint)
+	([name] varchar(128), id varchar(128), displayMode smallint, [type] smallint)
 go
 
---Holds Extended Item Properties
-create type dbo.AdditionalPropertiesTableType as table
-	([name] varchar(128), amount nvarchar(128), id varchar(128), displayMode tinyint, progress float)
+--Holds item Properties Data
+create type dbo.ExpPropertiesTableType as table
+	([name] varchar(128), id varchar(128), amount varchar(128), displayMode smallint, progress float)
 go
 
 --Holds Requirements Information
@@ -264,3 +274,32 @@ BEGIN
 
 END
 GO
+
+
+CREATE PROCEDURE usp_PropertiesParse
+@newPropertiesData PropertiesTableType READONLY
+AS
+BEGIN
+--Update Properties Table
+	DELETE FROM Properties WITH (HOLDLOCK)
+	WHERE (SELECT npd.id FROM @newPropertiesData npd) = ItemId
+	
+	INSERT INTO Properties (itemId, propertyName, displayMode, propertyType)
+	SELECT npd.id, npd.[name], npd.displayMode, npd.[type] FROM @newPropertiesData npd
+END
+GO
+
+CREATE PROCEDURE usp_SocketsParse
+@newSocketData SocketTableType READONLY
+AS
+BEGIN
+	DELETE FROM Sockets WITH (HOLDLOCK)
+	WHERE ItemId IN (SELECT nsd.id FROM @newSocketData nsd)
+	
+	INSERT INTO Sockets (itemId, socketGroup, socketAttr)
+	SELECT * FROM @newSocketData
+END
+GO
+
+
+select * from Sockets
