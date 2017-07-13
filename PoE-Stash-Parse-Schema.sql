@@ -16,8 +16,16 @@ CREATE TABLE Accounts
   lastSeen datetime
 )
 
+CREATE TABLE Leagues (
+  leagueName varchar(128) NOT NULL DEFAULT '' PRIMARY KEY,
+  active tinyint DEFAULT 0,
+  poeTradeId varchar(128) DEFAULT ''
+)
+
 CREATE TABLE Stashes (
   stashId varchar(128) NOT NULL DEFAULT '' PRIMARY KEY,
+  accountName nvarchar(128) NOT NULL FOREIGN KEY REFERENCES Accounts (accountName),
+  league varchar(128) NOT NULL FOREIGN KEY REFERENCES Leagues (leagueName),
   stashName nvarchar(128) DEFAULT NULL,
   stashType varchar(128) DEFAULT NULL,
   publicStash tinyint DEFAULT 0,
@@ -30,18 +38,11 @@ CREATE TABLE ChangeId (
   PRIMARY KEY (id,nextChangeId)
 )
 
-CREATE TABLE Leagues (
-  leagueName varchar(128) NOT NULL DEFAULT '' PRIMARY KEY,
-  active tinyint DEFAULT 0,
-  poeTradeId varchar(128) DEFAULT ''
-)
-
 CREATE TABLE Items (
   w tinyint NOT NULL DEFAULT 0,
   h tinyint NOT NULL DEFAULT 0,
   ilvl smallint NOT NULL DEFAULT 0,
   icon varchar(1024) DEFAULT NULL,
-  league varchar(128) NOT NULL DEFAULT '' FOREIGN KEY REFERENCES Leagues (leagueName),
   itemId varchar(128) NOT NULL DEFAULT '' PRIMARY KEY,
   name varchar(128) DEFAULT NULL,
   typeLine varchar(128) DEFAULT NULL,
@@ -53,7 +54,6 @@ CREATE TABLE Items (
   x smallint DEFAULT 0,
   y smallint DEFAULT 0,
   inventoryId varchar(128) DEFAULT NULL,
-  accountName nvarchar(128) NOT NULL DEFAULT '' FOREIGN KEY REFERENCES Accounts (accountName),
   stashId varchar(128) NOT NULL DEFAULT '' FOREIGN KEY REFERENCES Stashes (stashID) ON DELETE CASCADE,
   socketAmount tinyint NOT NULL DEFAULT 0,
   flavourText varchar(1024) DEFAULT NULL,
@@ -127,16 +127,16 @@ GO
 
 --Holds Stash & Account Information
 CREATE TYPE dbo.StashesTableType AS TABLE
-	(accountName NVARCHAR(128), lastCharacterName NVARCHAR(128), id VARCHAR(128), stash NVARCHAR(128), 
+	(accountName NVARCHAR(128), league varchar(128), lastCharacterName NVARCHAR(128), id VARCHAR(128), stash NVARCHAR(128), 
 	stashType VARCHAR(128), _public BIT)
 GO
 
 
 --Holds Item Information
 create type dbo.ItemsTableType as table
-	(w tinyint, h tinyint, ilvl smallint, icon varchar(1024), league varchar(128), id varchar(128), [name] nvarchar(128),
+	(w tinyint, h tinyint, ilvl smallint, icon varchar(1024), id varchar(128), [name] nvarchar(128),
 	typeLine varchar(128), identified bit, corrupted bit, lockedToCharacter bit, secDescrText varchar(1024),
-	frameType tinyint, x smallint, y smallint, inventoryId varchar(128), accountName nvarchar(128), stashId varchar(128),
+	frameType tinyint, x smallint, y smallint, inventoryId varchar(128), stashId varchar(128),
 	note nvarchar(128), flavourTextVal varchar(1024), socketAmount tinyint, isCrafted bit, isEnchanted bit, 
 	stackSize int, maxStackSize int)
 go
@@ -169,6 +169,10 @@ create type dbo.RequirementsTableType as table
 	([name] varchar(128), amount smallint, id varchar(128), displayMode tinyint)
 go
 
+create type dbo.StashIdTable as table
+	(stashId varchar(128))
+go
+
 
 --Create Stored Procedures to handle Data Tables.
 CREATE PROCEDURE usp_AddChangeId
@@ -194,6 +198,15 @@ CREATE PROCEDURE usp_StashParse
 @newStashData StashesTableType READONLY
 AS
 BEGIN
+--Update Leagues Table
+	MERGE Leagues WITH (HOLDLOCK) AS L
+	USING (SELECT DISTINCT league FROM @newStashData) 
+	AS poed (league)
+		ON poed.league = L.leagueName
+	WHEN NOT MATCHED THEN
+		INSERT (leagueName, active, poeTradeId)
+		VALUES (poed.league, 1, poed.league);
+
 --Update Account Table	
 	MERGE Accounts WITH (HOLDLOCK) AS A
 	USING (SELECT DISTINCT nsd.accountName, nsd.lastCharacterName, GETDATE() FROM @newStashData nsd)
@@ -207,16 +220,18 @@ BEGIN
 
 --Update Stashes Table
 	MERGE Stashes WITH (HOLDLOCK) AS S
-	USING (SELECT DISTINCT nsd.id, nsd.stash, nsd.stashType, nsd._public FROM @newStashData nsd)
-	AS poed (stashId, stashName, stashType, publicStash)
+	USING (SELECT nsd.id, nsd.league, nsd.accountName, nsd.stash, nsd.stashType, nsd._public FROM @newStashData nsd)
+	AS poed (stashId, league, accountName, stashName, stashType, publicStash)
 		ON poed.stashId = S.stashId
 	WHEN MATCHED THEN
-		UPDATE SET S.stashName = poed.stashName, 
+		UPDATE SET S.stashName = poed.stashName,
+					S.league = poed.league,
+					S.accountName = poed.accountName,
 					S.stashType = poed.stashType,
 					S.publicStash = poed.publicStash
 	WHEN NOT MATCHED THEN
-		INSERT (stashId, stashName, stashType, publicStash)
-		VALUES (poed.stashId, poed.stashName, poed.stashType, poed.publicStash);
+		INSERT (stashId, league, accountName, stashName, stashType, publicStash)
+		VALUES (poed.stashId, poed.league, poed.accountName, poed.stashName, poed.stashType, poed.publicStash);
 END
 GO
 
@@ -225,14 +240,6 @@ CREATE PROCEDURE usp_BaseItemsParse
 @newItemsData ItemsTableType readonly
 AS
 BEGIN
-	MERGE Leagues WITH (HOLDLOCK) AS L
-	USING (SELECT DISTINCT league FROM @newItemsData) 
-	AS poed (league)
-		ON poed.league = L.leagueName
-	WHEN NOT MATCHED THEN
-		INSERT (leagueName, active, poeTradeId)
-		VALUES (poed.league, 1, poed.league);
-
 --Update Items Table	
 	MERGE Items WITH (HOLDLOCK) AS I
 	USING (SELECT * FROM @newItemsData nid) AS poed
@@ -243,7 +250,6 @@ BEGIN
 				I.h = poed.h,
 				I.ilvl = poed.ilvl,
 				I.icon = poed.icon,
-				I.league = poed.league,
 				I.itemId = poed.id,
 				I.name = poed.name,
 				I.typeLine = poed.typeLine,
@@ -255,7 +261,6 @@ BEGIN
 				I.x = poed.x,
 				I.y = poed.y,
 				I.inventoryId = poed.inventoryId,
-				I.accountName = poed.accountName,
 				I.stashId = poed.stashId,
 				I.socketAmount = poed.socketAmount,
 				I.flavourText = poed.flavourTextVal,
@@ -265,13 +270,11 @@ BEGIN
 				I.crafted = poed.isCrafted,
 				I.enchanted = poed.isEnchanted
 		WHEN NOT MATCHED THEN
-			INSERT (w, h, ilvl, icon, league, itemId, name, typeLine, identified, corrupted, lockedToCharacter, secDescrText, frameType, x, y, inventoryId, accountName, stashId, 
+			INSERT (w, h, ilvl, icon, itemId, name, typeLine, identified, corrupted, lockedToCharacter, secDescrText, frameType, x, y, inventoryId, stashId, 
 						socketAmount, flavourText, stackSize, maxStackSize, price, crafted, enchanted)
-			VALUES (poed.w, poed.h, poed.ilvl, poed.icon, poed.league, poed.id, poed.name, poed.typeLine, poed.identified, poed.corrupted, poed.lockedToCharacter, poed.secDescrText,
-					poed.frameType, poed.x, poed.y, poed.inventoryId, poed.accountName, poed.stashId, poed.socketAmount, poed.flavourTextVal, poed.stackSize, poed.maxStackSize, poed.note, 
+			VALUES (poed.w, poed.h, poed.ilvl, poed.icon, poed.id, poed.name, poed.typeLine, poed.identified, poed.corrupted, poed.lockedToCharacter, poed.secDescrText,
+					poed.frameType, poed.x, poed.y, poed.inventoryId, poed.stashId, poed.socketAmount, poed.flavourTextVal, poed.stackSize, poed.maxStackSize, poed.note, 
 					poed.isCrafted, poed.isEnchanted);
-
-
 END
 GO
 
@@ -301,5 +304,12 @@ BEGIN
 END
 GO
 
-
-select * from Sockets
+CREATE PROCEDURE usp_StashDelete
+@stashId varchar(128)
+AS
+BEGIN
+	DELETE 
+	FROM Stashes
+	WHERE stashId = @stashId
+END
+GO
