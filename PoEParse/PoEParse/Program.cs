@@ -17,7 +17,7 @@ namespace PoEParse
         {
 
             var startTimeSpan = TimeSpan.Zero;
-            var periodTimeSpan = TimeSpan.FromMilliseconds(1050);
+            var periodTimeSpan = TimeSpan.FromMilliseconds(1500);
             timer = new System.Threading.Timer((t) =>
             {
 

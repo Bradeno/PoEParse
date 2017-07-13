@@ -89,7 +89,6 @@ namespace PoEParse
             List<Requirement1> RequirementList2 = new List<Requirement1>();
             List<Nextlevelrequirement> NextLevelRequirementList = new List<Nextlevelrequirement>();
             List<Nextlevelrequirement1> NextLevelRequirementList2 = new List<Nextlevelrequirement1>();
-
             //Custom Tables
             DataTable Mods_DT = new DataTable("Mods");
             Mods_DT.Columns.AddRange(new DataColumn[]
@@ -120,212 +119,49 @@ namespace PoEParse
                 SaveChangeId(root.next_change_id);
             }
             else
-                return;            
+                return;
+
             
+
             //start megaloop
             foreach (Stash stash in root.stashes)
-            {
-                //Glitches in the system cause null account names, avoid them.
-                if (stash.accountName != null)
+            {              
+                //Skip Null Accounts and Empty Stashes.
+                if (stash.accountName != null & stash.items.Length != 0)
                 {
-                    StashList.Add(stash);
-                }                
-
-                foreach (Item item in stash.items)
-                {
-
-                    item.accountName = stash.accountName;
-                    item.stashId = stash.id;
-                    item.name = item.name.Replace("<<set:MS>><<set:M>><<set:S>>", "");
-                    item.typeLine = item.typeLine.Replace("<<set:MS>><<set:M>><<set:S>>", "");
-
-                    if (item.flavourText != null)
+                    foreach (Item item in stash.items)
                     {
-                        Item aie = new Item();
-                        aie.flavourText = item.flavourText;
-                        int len = aie.flavourText.Count();
+                        item.stashId = stash.id;
+                        item.name = item.name.Replace("<<set:MS>><<set:M>><<set:S>>", "");
+                        item.typeLine = item.typeLine.Replace("<<set:MS>><<set:M>><<set:S>>", "");
 
-                        for (int i = 0; i < len; i++)
+                        if (item.flavourText != null)
                         {
-                            item.flavourTextVal += item.flavourText[i] + " ";
-                        }
-                    }
-                    else
-                    {
-                        item.flavourTextVal = "";
-                    }                  
-                    
+                            Item aie = new Item();
+                            aie.flavourText = item.flavourText;
+                            int len = aie.flavourText.Count();
 
-                    ItemList.Add(item);
-
-                    if (item.explicitMods != null)
-                    {
-                        String[] modValue;
-                        modValue = new String[15];
-                        modValue.DefaultIfEmpty("");
-
-                        List<String> ModsList = new List<string>();
-                        ModsList = item.explicitMods.ToList();
-
-                        int numMods = ModsList.Count();
-
-                        for (int i = 0; i < numMods; i++)
-                        {
-                            modValue[i] = ModsList[i].ToString();
-                        }
-
-                        //Mods Datatable to send to SQL
-                        Mods_DT.Rows.Add(item.id, "Explicit", modValue[0], modValue[1], modValue[2], modValue[3], modValue[4], modValue[5], modValue[6], modValue[7], modValue[8], modValue[9], modValue[10], modValue[11]);
-                    }
-
-                    if (item.implicitMods != null)
-                    {
-                        String[] modValue;
-                        modValue = new String[12];
-                        modValue.DefaultIfEmpty("");
-
-                        List<String> ModsList = new List<string>();
-                        ModsList = item.implicitMods.ToList();
-
-                        int numMods = ModsList.Count();
-
-                        for (int i = 0; i < numMods; i++)
-                        {
-                            modValue[i] = ModsList[i].ToString();
-                        }
-
-                        //Mods Datatable to send to SQL
-                        Mods_DT.Rows.Add(item.id, "Implicit", modValue[0], modValue[1], modValue[2], modValue[3], modValue[4], modValue[5], modValue[6], modValue[7], modValue[8], modValue[9], modValue[10], modValue[11]);
-                    }
-
-                    if (item.craftedMods != null)
-                    {
-                        String[] modValue;
-                        modValue = new String[12];
-                        modValue.DefaultIfEmpty("");
-
-                        List<String> ModsList = new List<string>();
-                        ModsList = item.craftedMods.ToList();
-
-                        int numMods = ModsList.Count();
-
-                        for (int i = 0; i < numMods; i++)
-                        {
-                            modValue[i] = ModsList[i].ToString();
-                        }
-
-                        //Mods Datatable to send to SQL
-                        Mods_DT.Rows.Add(item.id, "Cosmetic", modValue[0], modValue[1], modValue[2], modValue[3], modValue[4], modValue[5], modValue[6], modValue[7], modValue[8], modValue[9], modValue[10], modValue[11]);
-
-                        item.isCrafted = true;
-                    }
-
-                    if (item.utilityMods != null)
-                    {
-                        String[] modValue;
-                        modValue = new String[12];
-                        modValue.DefaultIfEmpty("");
-
-                        List<String> ModsList = new List<string>();
-                        ModsList = item.utilityMods.ToList();
-
-                        int numMods = ModsList.Count();
-
-                        for (int i = 0; i < numMods; i++)
-                        {
-                            modValue[i] = ModsList[i].ToString();
-                        }
-
-                        //Mods Datatable to send to SQL
-                        Mods_DT.Rows.Add(item.id, "Utility", modValue[0], modValue[1], modValue[2], modValue[3], modValue[4], modValue[5], modValue[6], modValue[7], modValue[8], modValue[9], modValue[10], modValue[11]);
-                    }
-
-                    if (item.enchantMods != null)
-                    {
-                        String[] modValue;
-                        modValue = new String[12];
-                        modValue.DefaultIfEmpty("");
-
-                        List<String> ModsList = new List<string>();
-                        ModsList = item.enchantMods.ToList();
-
-                        int numMods = ModsList.Count();
-
-                        for (int i = 0; i < numMods; i++)
-                        {
-                            modValue[i] = ModsList[i].ToString();
-                        }
-
-                        //Mods Datatable to send to SQL
-                        Mods_DT.Rows.Add(item.id, "Enchanted", modValue[0], modValue[1], modValue[2], modValue[3], modValue[4], modValue[5], modValue[6], modValue[7], modValue[8], modValue[9], modValue[10], modValue[11]);
-
-                        item.isEnchanted = true;
-                    }
-
-
-                    //Count Iterations through the socket loop to get our socket count.
-                    int socks = 0;
-
-                    foreach (Socket socket in item.sockets)
-                    {
-                        socket.id = item.id;
-                        SocketList.Add(socket);
-                        socks++;
-                    }
-
-                    item.socketAmount = socks;
-
-
-                    /*
-
-                    foreach (Socketeditem socketedItem in item.socketedItems)
-                    {
-                        socketedItem.accountName = stash.accountName;
-                        socketedItem.stashId = stash.id;
-                        SocketedItemList.Add(socketedItem);
-
-                        foreach (Requirement1 requirement1 in socketedItem.requirements)
-                        {
-                            requirement1.id = socketedItem.id;
-                            requirement1.amount = requirement1.values[0][0];
-                            RequirementList2.Add(requirement1);
-                        }
-
-                        if (socketedItem.nextLevelRequirements != null)
-                        {
-                            foreach (Nextlevelrequirement nextLevelReq in socketedItem.nextLevelRequirements)
+                            for (int i = 0; i < len; i++)
                             {
-                                nextLevelReq.amount = nextLevelReq.values[0][0];
-                                nextLevelReq.id = socketedItem.id;
-                                NextLevelRequirementList.Add(nextLevelReq);
-                            }
-
-                        }
-
-                        foreach (Property2 property2 in socketedItem.properties)
-                        {
-                            property2.id = socketedItem.id;
-                            PropertyList2.Add(property2);
-                        }
-
-                        if (socketedItem.additionalProperties != null)
-                        {
-                            foreach (Additionalproperty1 additionalProps1 in socketedItem.additionalProperties)
-                            {
-                                additionalProps1.id = socketedItem.id;
-                                additionalProps1.amount = additionalProps1.values[0][0];
-                                AdditionalPropertyList2.Add(additionalProps1);
+                                item.flavourTextVal += item.flavourText[i] + " ";
                             }
                         }
+                        else
+                        {
+                            item.flavourTextVal = "";
+                        }
 
-                        if (socketedItem.explicitMods != null)
+
+                        ItemList.Add(item);
+
+                        if (item.explicitMods != null)
                         {
                             String[] modValue;
-                            modValue = new String[12];
+                            modValue = new String[15];
                             modValue.DefaultIfEmpty("");
 
                             List<String> ModsList = new List<string>();
-                            ModsList = socketedItem.explicitMods.ToList();
+                            ModsList = item.explicitMods.ToList();
 
                             int numMods = ModsList.Count();
 
@@ -337,51 +173,237 @@ namespace PoEParse
                             //Mods Datatable to send to SQL
                             Mods_DT.Rows.Add(item.id, "Explicit", modValue[0], modValue[1], modValue[2], modValue[3], modValue[4], modValue[5], modValue[6], modValue[7], modValue[8], modValue[9], modValue[10], modValue[11]);
                         }
+
+                        if (item.implicitMods != null)
+                        {
+                            String[] modValue;
+                            modValue = new String[12];
+                            modValue.DefaultIfEmpty("");
+
+                            List<String> ModsList = new List<string>();
+                            ModsList = item.implicitMods.ToList();
+
+                            int numMods = ModsList.Count();
+
+                            for (int i = 0; i < numMods; i++)
+                            {
+                                modValue[i] = ModsList[i].ToString();
+                            }
+
+                            //Mods Datatable to send to SQL
+                            Mods_DT.Rows.Add(item.id, "Implicit", modValue[0], modValue[1], modValue[2], modValue[3], modValue[4], modValue[5], modValue[6], modValue[7], modValue[8], modValue[9], modValue[10], modValue[11]);
+                        }
+
+                        if (item.craftedMods != null)
+                        {
+                            String[] modValue;
+                            modValue = new String[12];
+                            modValue.DefaultIfEmpty("");
+
+                            List<String> ModsList = new List<string>();
+                            ModsList = item.craftedMods.ToList();
+
+                            int numMods = ModsList.Count();
+
+                            for (int i = 0; i < numMods; i++)
+                            {
+                                modValue[i] = ModsList[i].ToString();
+                            }
+
+                            //Mods Datatable to send to SQL
+                            Mods_DT.Rows.Add(item.id, "Cosmetic", modValue[0], modValue[1], modValue[2], modValue[3], modValue[4], modValue[5], modValue[6], modValue[7], modValue[8], modValue[9], modValue[10], modValue[11]);
+
+                            item.isCrafted = true;
+                        }
+
+                        if (item.utilityMods != null)
+                        {
+                            String[] modValue;
+                            modValue = new String[12];
+                            modValue.DefaultIfEmpty("");
+
+                            List<String> ModsList = new List<string>();
+                            ModsList = item.utilityMods.ToList();
+
+                            int numMods = ModsList.Count();
+
+                            for (int i = 0; i < numMods; i++)
+                            {
+                                modValue[i] = ModsList[i].ToString();
+                            }
+
+                            //Mods Datatable to send to SQL
+                            Mods_DT.Rows.Add(item.id, "Utility", modValue[0], modValue[1], modValue[2], modValue[3], modValue[4], modValue[5], modValue[6], modValue[7], modValue[8], modValue[9], modValue[10], modValue[11]);
+                        }
+
+                        if (item.enchantMods != null)
+                        {
+                            String[] modValue;
+                            modValue = new String[12];
+                            modValue.DefaultIfEmpty("");
+
+                            List<String> ModsList = new List<string>();
+                            ModsList = item.enchantMods.ToList();
+
+                            int numMods = ModsList.Count();
+
+                            for (int i = 0; i < numMods; i++)
+                            {
+                                modValue[i] = ModsList[i].ToString();
+                            }
+
+                            //Mods Datatable to send to SQL
+                            Mods_DT.Rows.Add(item.id, "Enchanted", modValue[0], modValue[1], modValue[2], modValue[3], modValue[4], modValue[5], modValue[6], modValue[7], modValue[8], modValue[9], modValue[10], modValue[11]);
+
+                            item.isEnchanted = true;
+                        }
+
+
+                        //Count Iterations through the socket loop to get our socket count.
+                        int socks = 0;
+
+                        foreach (Socket socket in item.sockets)
+                        {
+                            socket.id = item.id;
+                            SocketList.Add(socket);
+                            socks++;
+                        }
+
+                        item.socketAmount = socks;
+
+
+                        /*
+
+                        foreach (Socketeditem socketedItem in item.socketedItems)
+                        {
+                            socketedItem.accountName = stash.accountName;
+                            socketedItem.stashId = stash.id;
+                            SocketedItemList.Add(socketedItem);
+
+                            foreach (Requirement1 requirement1 in socketedItem.requirements)
+                            {
+                                requirement1.id = socketedItem.id;
+                                requirement1.amount = requirement1.values[0][0];
+                                RequirementList2.Add(requirement1);
+                            }
+
+                            if (socketedItem.nextLevelRequirements != null)
+                            {
+                                foreach (Nextlevelrequirement nextLevelReq in socketedItem.nextLevelRequirements)
+                                {
+                                    nextLevelReq.amount = nextLevelReq.values[0][0];
+                                    nextLevelReq.id = socketedItem.id;
+                                    NextLevelRequirementList.Add(nextLevelReq);
+                                }
+
+                            }
+
+                            foreach (Property2 property2 in socketedItem.properties)
+                            {
+                                property2.id = socketedItem.id;
+                                PropertyList2.Add(property2);
+                            }
+
+                            if (socketedItem.additionalProperties != null)
+                            {
+                                foreach (Additionalproperty1 additionalProps1 in socketedItem.additionalProperties)
+                                {
+                                    additionalProps1.id = socketedItem.id;
+                                    additionalProps1.amount = additionalProps1.values[0][0];
+                                    AdditionalPropertyList2.Add(additionalProps1);
+                                }
+                            }
+
+                            if (socketedItem.explicitMods != null)
+                            {
+                                String[] modValue;
+                                modValue = new String[12];
+                                modValue.DefaultIfEmpty("");
+
+                                List<String> ModsList = new List<string>();
+                                ModsList = socketedItem.explicitMods.ToList();
+
+                                int numMods = ModsList.Count();
+
+                                for (int i = 0; i < numMods; i++)
+                                {
+                                    modValue[i] = ModsList[i].ToString();
+                                }
+
+                                //Mods Datatable to send to SQL
+                                Mods_DT.Rows.Add(item.id, "Explicit", modValue[0], modValue[1], modValue[2], modValue[3], modValue[4], modValue[5], modValue[6], modValue[7], modValue[8], modValue[9], modValue[10], modValue[11]);
+                            }
+                        }
+
+                        */
+
+                        if (item.nextLevelRequirements != null)
+                        {
+                            foreach (Nextlevelrequirement1 nextLevelReq1 in item.nextLevelRequirements)
+                            {
+                                nextLevelReq1.id = item.id;
+                                nextLevelReq1.amount = nextLevelReq1.values[0][0];
+                                NextLevelRequirementList2.Add(nextLevelReq1);
+                            }
+                        }
+
+                        if (item.properties != null)
+                        {
+                            foreach (Property1 property1 in item.properties)
+                            {
+                                property1.id = item.id;
+                                PropertyList1.Add(property1);
+                            }
+                        }
+
+
+                        if (item.additionalProperties != null)
+                        {
+                            foreach (Additionalproperty additionalProp in item.additionalProperties)
+                            {
+                                additionalProp.id = item.id;
+                                additionalProp.amount = additionalProp.values[0][0];
+                                AdditionalPropertyList.Add(additionalProp);
+                            }
+                        }
+
+                        if (item.requirements != null)
+                        {
+                            foreach (Requirement requirement in item.requirements)
+                            {
+                                requirement.id = item.id;
+                                requirement.amount = requirement.values[0][0];
+                                RequirementList.Add(requirement);
+                            }
+                        }
+
+                        if (stash.league == null)
+                        {
+                            stash.league = item.league;
+                        }                           
+
+                        if (item.league == "")
+                        {
+                            Console.WriteLine("item has no league?: " + item.name);
+                        }
+                        
                     }
 
-                    */
-
-                    if (item.nextLevelRequirements != null)
+                    if (stash.league == "" || stash.league == null)
                     {
-                        foreach (Nextlevelrequirement1 nextLevelReq1 in item.nextLevelRequirements)
-                        {
-                            nextLevelReq1.id = item.id;
-                            nextLevelReq1.amount = nextLevelReq1.values[0][0];
-                            NextLevelRequirementList2.Add(nextLevelReq1);
-                        }
-                    }                    
-
-                    if (item.properties != null)
-                    {
-                        foreach (Property1 property1 in item.properties)
-                        {
-                            property1.id = item.id;                          
-                            PropertyList1.Add(property1);
-                        }
+                        Console.WriteLine("Stash League is fucking broken.//");
                     }
-                    
 
-                    if (item.additionalProperties != null)
-                    {
-                        foreach (Additionalproperty additionalProp in item.additionalProperties)
-                        {
-                            additionalProp.id = item.id;
-                            additionalProp.amount = additionalProp.values[0][0];
-                            AdditionalPropertyList.Add(additionalProp);
-                        }
-                    }                    
+                    StashList.Add(stash);
+                }  
+                //Populate Table of Stashes to Delete
+                else
+                {
+                    Delete_Emptied_Stash(stash.id);
+                    Console.WriteLine("Stash Emptied: " + stash.id);
+                }
 
-                    if (item.requirements != null)
-                    {
-                        foreach (Requirement requirement in item.requirements)
-                        {
-                            requirement.id = item.id;
-                            requirement.amount = requirement.values[0][0];
-                            RequirementList.Add(requirement);
-                        }
-                    }
-                    
-                }                
+                                
             }
 
             //Convert each list to a datatable
@@ -398,7 +420,6 @@ namespace PoEParse
             //DataTable Requirements2_DT = dataTableConverter.ToDataTable(RequirementList2);                 
             DataTable NextLevelRequirement_DT = dataTableConverter.ToDataTable(NextLevelRequirementList);
             DataTable NextLevelRequirement2_DT = dataTableConverter.ToDataTable(NextLevelRequirementList2);
-
             //Clean up the DataTables
             if (Stashes_DT.Columns.Contains("items")) { Stashes_DT.Columns.Remove("items"); }
 
@@ -424,6 +445,7 @@ namespace PoEParse
             if (Items_DT.Columns.Contains("prophecyText")) { Items_DT.Columns.Remove("prophecyText"); }
             if (Items_DT.Columns.Contains("prophecyDiffText")) { Items_DT.Columns.Remove("prophecyDiffText"); }
             if (Items_DT.Columns.Contains("support")) { Items_DT.Columns.Remove("support"); }
+            if (Items_DT.Columns.Contains("league")) { Items_DT.Columns.Remove("league"); }
 
             /*
 
@@ -543,6 +565,20 @@ namespace PoEParse
             {
                 conn.Open();
                 return (String)(comm.ExecuteScalar());
+            }
+        }
+
+        public void Delete_Emptied_Stash(string stashId)
+        {
+            using (SqlConnection conn = new SqlConnection(SQLConnectionString))
+            using (SqlCommand comm = new SqlCommand("usp_StashDelete", conn))
+            {
+                conn.Open();
+                comm.CommandType = CommandType.StoredProcedure;
+                comm.Parameters.AddWithValue("@stashId", stashId);
+                comm.ExecuteNonQuery();
+                comm.Parameters.Clear();
+                conn.Close();
             }
         }
 

@@ -12,9 +12,10 @@ namespace PoEParse
         public Stash[] stashes { get; set; }
     }
 
-    public struct Stash
+    public class Stash
     {
         public string accountName { get; set; }
+        public string league { get; set; }
         public string lastCharacterName { get; set; }
         public string id { get; set; }
         public string stash { get; set; }
@@ -31,10 +32,11 @@ namespace PoEParse
         public int ilvl { get; set; }
         public string icon { get; set; }
         public bool support { get; set; }
+        //Add the League to the Stash and capture it there. One Stash isn't shared between leagues lol.
         public string league { get; set; }
         public string id { get; set; }
-        public string name { get; set; }
-        public string typeLine { get; set; }
+        public string name { get; set; } //Prefix
+        public string typeLine { get; set; } //Suffix
         public bool identified { get; set; }
         public bool corrupted { get; set; }
         public bool lockedToCharacter { get; set; }
@@ -47,7 +49,6 @@ namespace PoEParse
         public string inventoryId { get; set; }
 
         //add account name & stash id as reference.
-        public string accountName { get; set; }
         public string stashId { get; set; }
 
         public string[] cosmeticMods { get; set; }
